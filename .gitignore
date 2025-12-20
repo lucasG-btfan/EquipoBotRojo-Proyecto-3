@@ -1,0 +1,11 @@
+logs/
+elastic_data/
+postgres_data/
+n8n_data/
+
+# Backups
+*.backup
+
+# OS
+.DS_Store
+Thumbs.db
