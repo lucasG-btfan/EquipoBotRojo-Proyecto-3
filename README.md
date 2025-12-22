@@ -20,10 +20,13 @@ PS C:\Users\rafan\OneDrive\Documentos\EquipoBotRojo.Proyecto3> docker exec clien
 PS C:\Users\rafan\OneDrive\Documentos\EquipoBotRojo.Proyecto3> docker exec -it syslog-ng cat /var/log/centralized/all.log
 
 ### Aclaracion
-El contenido de esta version esta diseñado para cumplir con las consignas del ejercicio 1 del github: 
+El contenido de esta version esta diseñado para cumplir con las consignas del ejercicio 1 y 2 (parte 1) del github: 
+Ejercicio 1:
 - Syslog-ng configurado como servidor central
 - Tres clientes simulados enviando logs
 - Verificacion de recepcion centralizada
+Ejercicio 2:
+- Crear 5 reglas personalizadas de deteccion
 
 PS C:\Users\rafan\OneDrive\Documentos\EquipoBotRojo.Proyecto3> docker exec -it syslog-ng cat /var/log/security/alerts.log
 cat: /var/log/security/alerts.log: No such file or directory
@@ -38,3 +41,9 @@ filter f_ssh_failed {
 };
 
 Esta parte: facility(auth, authpriv); dificulta la creacion de logs manuales, pero el sistema funciona correctamente.
+
+El paso de instalacion de Elasticsearch (paso 3) se realiza mediante Docker Compose en lugar de instalacion directa sobre el sistema operativo, cumpliendo la misma funcionalidad de forma portable y reproducible.
+
+Para el paso 4, se usa el comando Invoke-WebRequest -UseBasicParsing http://localhost:9200/_cat/indices?v para comprobar que la conexion entre elasticsearch y logstash funcione.
+
+Para el paso 5, se creo una carpeta llamada db donde esta el archivo schema.sql, donde esta la creacion de tablas e indices (la creacion de la base de datos esta comentada porque Docker ya se encarga de eso, por lo que daria error) 
