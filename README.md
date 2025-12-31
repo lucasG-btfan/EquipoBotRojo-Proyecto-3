@@ -47,3 +47,15 @@ El paso de instalacion de Elasticsearch (paso 3) se realiza mediante Docker Comp
 Para el paso 4, se usa el comando Invoke-WebRequest -UseBasicParsing http://localhost:9200/_cat/indices?v para comprobar que la conexion entre elasticsearch y logstash funcione.
 
 Para el paso 5, se creo una carpeta llamada db donde esta el archivo schema.sql, donde esta la creacion de tablas e indices (la creacion de la base de datos esta comentada porque Docker ya se encarga de eso, por lo que daria error) 
+
+## flujos de n8n
+cada nodo:
+1. Schedule Trigger: "Despierta" cada 5 minutos para iniciar el análisis
+2. Simulate Logs: Fabrica eventos de seguridad como si vinieran de syslog
+3. Parse Logs: Extrae IPs, usuarios, tipos de ataque de texto crudo
+4. Apply Rules: Pregunta a PostgreSQL: "¿Estos eventos violan alguna regla?"
+5. Check Severity: Decide: ¿Es alerta real (high/medium) o solo info?
+6. Store Alerts (rama YES): Guarda en DB para historial e investigación
+7. Send Notifications: Prepara avisos (en consola, listos para email/Slack)
+8. Log Only (rama NO): Registra que no pasó nada importante
+9. Update Patterns: Cierra el ciclo, actualiza estadísticas
