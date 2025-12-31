@@ -1,0 +1,275 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1040,
+        112
+      ],
+      "id": "829d95bc-5756-4524-9a6d-e00908985912",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "const fiveMinutesAgo = new Date(Date.now() - (5 * 60 * 1000));\n\nconst simulatedLogs = [];\n\nconst logTypes = [\n  {\n    type: 'ssh_failed',\n    pattern: 'Failed password for',\n    count: Math.floor(Math.random() * 8) + 1, // 1-8 intentos\n    template: (i) => `${new Date(Date.now() - i * 30000).toISOString()} server1 sshd[${1234 + i}]: Failed password for invalid user attacker${i} from 192.168.1.${100 + i} port 22`\n  },\n  {\n    type: 'sudo_usage', \n    pattern: 'sudo: session opened',\n    count: Math.floor(Math.random() * 3) + 1,\n    template: (i) => `${new Date(Date.now() - i * 60000).toISOString()} server1 sudo: pam_unix(sudo:session): session opened for user root by admin`\n  },\n  {\n    type: 'iptables_drop',\n    pattern: 'iptables.*DROP',\n    count: Math.floor(Math.random() * 5) + 1,\n    template: (i) => `${new Date(Date.now() - i * 45000).toISOString()} firewall kernel: iptables: DROP IN=eth0 SRC=10.0.0.${i} DST=192.168.1.10 DPT=22`\n  },\n  {\n    type: 'sql_injection',\n    pattern: 'union.*select',\n    count: Math.random() > 0.7 ? 1 : 0,\n    template: () => `${new Date().toISOString()} web-server apache2: 192.168.1.50 - - [10/Dec/2024:14:30:25 +0000] \"GET /index.php?id=1' UNION SELECT NULL-- HTTP/1.1\" 200 512`\n  }\n];\n\n// Generar logs\nlogTypes.forEach(logType => {\n  for (let i = 0; i < logType.count; i++) {\n    const logTime = new Date(Date.now() - i * 30000);\n    if (logTime >= fiveMinutesAgo) {\n      simulatedLogs.push({\n        timestamp: logTime.toISOString(),\n        raw: logType.template(i),\n        file: logType.type === 'ssh_failed' ? 'failed_ssh.log' : 'alerts.log',\n        source: 'simulated'\n      });\n    }\n  }\n});\n\nif (simulatedLogs.length === 0) {\n  simulatedLogs.push({\n    timestamp: new Date().toISOString(),\n    raw: `${new Date().toISOString()} system: No security events in last 5 minutes`,\n    file: 'system.log',\n    source: 'test'\n  });\n}\n\nconsole.log(`Generated ${simulatedLogs.length} simulated logs for testing`);\nreturn simulatedLogs.map(log => ({ json: log }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -832,
+        112
+      ],
+      "id": "85a1a79c-f19d-4aed-893a-8fc152c39465",
+      "name": "nodo 2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nconst parsedLogs = items.map(item => {\n  const log = item.json;\n  let parsed = {\n    timestamp: log.timestamp,\n    raw: log.raw,\n    file: log.file,\n    source: log.source,\n    type: 'unknown'\n  };\n\n  const rawLower = log.raw.toLowerCase();\n  \n  if (rawLower.includes('failed password')) {\n    const sshMatch = log.raw.match(/Failed password for (?:invalid user )?(\\w+) from ([\\d.]+) port (\\d+)/i);\n    parsed.type = 'ssh_failed';\n    parsed.username = sshMatch ? sshMatch[1] : 'unknown';\n    parsed.source_ip = sshMatch ? sshMatch[2] : 'unknown';\n    parsed.port = sshMatch ? sshMatch[3] : 'unknown';\n    parsed.category = 'authentication_failure';\n    parsed.severity = 'medium';\n  }\n  \n  else if (rawLower.includes('sudo') && rawLower.includes('session opened')) {\n    const sudoMatch = log.raw.match(/session opened for user (\\w+) by (\\w+)/i);\n    parsed.type = 'sudo_usage';\n    parsed.user = sudoMatch ? sudoMatch[1] : 'unknown';\n    parsed.by_user = sudoMatch ? sudoMatch[2] : 'unknown';\n    parsed.category = 'privilege_escalation';\n    parsed.severity = 'low';\n  }\n  \n  else if (rawLower.includes('iptables') && rawLower.includes('drop')) {\n    const iptablesMatch = log.raw.match(/SRC=([\\d.]+).*DPT=(\\d+)/i);\n    parsed.type = 'iptables_drop';\n    parsed.source_ip = iptablesMatch ? iptablesMatch[1] : 'unknown';\n    parsed.dest_port = iptablesMatch ? iptablesMatch[2] : 'unknown';\n    parsed.category = 'network_attack';\n    parsed.severity = 'high';\n  }\n  \n  else if (rawLower.includes('union') || rawLower.includes('select') || rawLower.includes('drop table')) {\n    parsed.type = 'sql_injection_attempt';\n    parsed.category = 'web_attack';\n    parsed.severity = 'high';\n  }\n  \n  else if ((rawLower.includes('admin') || rawLower.includes('wp-admin') || rawLower.includes('.env')) && rawLower.includes('404')) {\n    parsed.type = 'directory_scan';\n    parsed.category = 'reconnaissance';\n    parsed.severity = 'medium';\n  }\n\n  return { json: parsed };\n});\n\nconst filteredLogs = parsedLogs.filter(log => log.json.type !== 'unknown');\n\nconsole.log(`Parsed ${filteredLogs.length} security events out of ${parsedLogs.length} total logs`);\nreturn filteredLogs;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -624,
+        112
+      ],
+      "id": "613aa6f8-9805-4708-9106-5ce1e7f582fd",
+      "name": "nodo 3"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.severity }}",
+                    "rightValue": "info",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEquals"
+                    },
+                    "id": "ae1ffb72-f4ec-4b10-8f05-6c0be29138b6"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "1e1a5dda-dcc2-4514-9689-a330cbdf31e8",
+                    "leftValue": "={{ $json.severity }}",
+                    "rightValue": "info",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -208,
+        112
+      ],
+      "id": "5d74fb1c-e746-4e4c-a631-8f8c826ba9b7",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "jsCode": "const logs = $input.all();\n\nasync function processWithPostgreSQL() {\n  try {\n    // Configuración de conexión\n    const postgresConfig = {\n      host: 'postgres',\n      port: 5432,\n      database: 'security_monitoring',\n      user: 'db_user',\n      password: 'db_pass'\n    };\n    \n    // En n8n, necesitas cargar el módulo pg así:\n    const pg = require('pg');\n    const client = new pg.Client(postgresConfig);\n    \n    await client.connect();\n    console.log('Connected to PostgreSQL');\n    \n    const result = await client.query(\n      'SELECT * FROM detection_rules WHERE enabled = true ORDER BY severity DESC'\n    );\n    \n    const rules = result.rows;\n    console.log(`Loaded ${rules.length} rules from database`);\n    \n    // Si no hay reglas, usar reglas por defecto\n    if (rules.length === 0) {\n      console.log('No rules in DB, using default rules');\n      rules.push(...[\n        {\n          id: 1,\n          name: 'SSH Brute Force',\n          pattern: 'Failed password',\n          severity: 'high',\n          threshold: 3,\n          time_window: 300,\n          description: 'Multiple failed SSH attempts'\n        },\n        {\n          id: 2,\n          name: 'Port Scan',\n          pattern: 'iptables.*DROP',\n          severity: 'medium', \n          threshold: 5,\n          time_window: 60,\n          description: 'Multiple blocked connections'\n        }\n      ]);\n    }\n    \n    // Agrupar logs\n    const logGroups = {};\n    logs.forEach(item => {\n      const log = item.json;\n      const key = `${log.type}_${log.source_ip || 'unknown'}`;\n      if (!logGroups[key]) logGroups[key] = [];\n      logGroups[key].push(log);\n    });\n    \n    const alerts = [];\n    \n    // Aplicar reglas\n    for (const rule of rules) {\n      for (const [key, logGroup] of Object.entries(logGroups)) {\n        const matchingLogs = logGroup.filter(log => {\n          try {\n            const regex = new RegExp(rule.pattern, 'i');\n            return regex.test(log.raw);\n          } catch (e) {\n            console.log(`Error in regex for rule ${rule.name}:`, e.message);\n            return false;\n          }\n        });\n        \n        if (matchingLogs.length >= rule.threshold) {\n          const timestamps = matchingLogs.map(log => new Date(log.timestamp).getTime());\n          const timeRange = Math.max(...timestamps) - Math.min(...timestamps);\n          \n          if (timeRange <= rule.time_window * 1000) {\n            alerts.push({\n              rule_id: rule.id,\n              rule_name: rule.name,\n              severity: rule.severity,\n              category: matchingLogs[0].category || 'general',\n              source_ip: matchingLogs[0].source_ip || 'unknown',\n              target_host: 'server1',\n              event_count: matchingLogs.length,\n              description: `${rule.description} - ${matchingLogs.length} eventos desde ${matchingLogs[0].source_ip || 'unknown'}`,\n              raw_logs: matchingLogs.map(log => log.raw),\n              first_occurrence: new Date(Math.min(...timestamps)).toISOString(),\n              last_occurrence: new Date(Math.max(...timestamps)).toISOString(),\n              from_database: true\n            });\n          }\n        }\n      }\n    }\n    \n    await client.end();\n    \n    return alerts;\n    \n  } catch (error) {\n    console.error('PostgreSQL Error:', error.message);\n    throw error; \n  }\n}\n\ntry {\n  const alerts = await processWithPostgreSQL();\n  \n  if (alerts.length === 0) {\n    alerts.push({\n      rule_id: 0,\n      rule_name: 'Monitoring Active',\n      severity: 'info',\n      category: 'system',\n      description: 'Security monitoring active - no alerts detected',\n      from_database: false\n    });\n  }\n  \n  console.log(`Generated ${alerts.length} alerts`);\n  return alerts.map(alert => ({ json: alert }));\n  \n} catch (error) {\n  console.error('Failed to process with PostgreSQL:', error.message);\n  \n  const fallbackAlerts = [{\n    rule_id: 999,\n    rule_name: 'Database Connection Failed',\n    severity: 'warning',\n    category: 'system',\n    description: `Using fallback rules: ${error.message}`,\n    from_database: false\n  }];\n  \n  return fallbackAlerts.map(alert => ({ json: alert }));\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -416,
+        112
+      ],
+      "id": "5f3c8bb1-f638-4e65-b47e-cae25355bc34",
+      "name": "nodo 4: detectar leyes"
+    },
+    {
+      "parameters": {
+        "jsCode": "const alerts = $input.all();\n\nconst notifications = [];\n\nalerts.forEach(item => {\n  const alert = item.json;\n  \n  let priority = 'normal';\n  let slackColor = '#36a64f'; \n  \n  if (alert.severity === 'critical') {\n    priority = 'urgent';\n    slackColor = '#ff0000'; // rojo\n  } else if (alert.severity === 'high') {\n    priority = 'high';\n    slackColor = '#ff9900'; // naranja\n  } else if (alert.severity === 'medium') {\n    slackColor = '#ffff00'; // amarillo\n  }\n  \n  notifications.push({\n    json: {\n      type: 'email',\n      channel: 'email',\n      to: 'security-team@example.com',\n      subject: `[${alert.severity.toUpperCase()}] ${alert.rule_name || 'Security Alert'}`,\n      body: `\nSECURITY ALERT REPORT\n=====================\nAlert ID: ${alert.alert_id || 'N/A'}\nTimestamp: ${new Date().toISOString()}\nSeverity: ${alert.severity}\nCategory: ${alert.category || 'N/A'}\n\nDETAILS:\n--------\nRule: ${alert.rule_name || 'Unknown'}\nSource IP: ${alert.source_ip || 'Unknown'}\nTarget Host: ${alert.target_host || 'Unknown'}\nEvent Count: ${alert.event_count || 1}\n\nDescription:\n${alert.description || 'No description provided'}\n\nFirst Occurrence: ${alert.first_occurrence || 'N/A'}\nLast Occurrence: ${alert.last_occurrence || 'N/A'}\n\n${alert.stored === false ? '⚠️ NOTE: Alert not stored in database (simulated)' : '✓ Stored in database'}\n${alert.db_error ? `Database Error: ${alert.db_error}` : ''}\n`,\n      priority: priority,\n      tags: ['security', alert.category || 'general', alert.severity]\n    }\n  });\n  \n  notifications.push({\n    json: {\n      type: 'slack',\n      channel: 'slack',\n      text: `Security Alert: ${alert.rule_name || 'Unknown Event'}`,\n      blocks: [\n        {\n          type: 'section',\n          text: {\n            type: 'mrkdwn',\n            text: `*${alert.severity.toUpperCase()} SECURITY ALERT*`\n          }\n        },\n        {\n          type: 'section',\n          fields: [\n            {\n              type: 'mrkdwn',\n              text: `*Rule:*\\n${alert.rule_name || 'Unknown'}`\n            },\n            {\n              type: 'mrkdwn',\n              text: `*Severity:*\\n${alert.severity}`\n            },\n            {\n              type: 'mrkdwn',\n              text: `*Source IP:*\\n${alert.source_ip || 'Unknown'}`\n            },\n            {\n              type: 'mrkdwn',\n              text: `*Events:*\\n${alert.event_count || 1}`\n            }\n          ]\n        },\n        {\n          type: 'section',\n          text: {\n            type: 'mrkdwn',\n            text: `*Description:*\\n${alert.description || 'No description'}`\n          }\n        },\n        {\n          type: 'context',\n          elements: [\n            {\n              type: 'mrkdwn',\n              text: `Alert ID: ${alert.alert_id || 'N/A'} | ${new Date().toLocaleString()}`\n            }\n          ]\n        }\n      ],\n      color: slackColor\n    }\n  });\n});\n\nconsole.log(`Prepared ${notifications.length} notifications for ${alerts.length} alerts`);\nreturn notifications;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "a6d05c70-a03d-4099-8573-7587b2167c05",
+      "name": "nodo 7: notificaciones"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nconsole.log(`No significant alerts (${items.length} info/low severity items)`);\n\nitems.forEach(item => {\n  const alert = item.json;\n  console.log(`Info alert: ${alert.rule_name || 'Unknown'} - ${alert.description || 'No description'}`);\n});\n\nreturn [{\n  json: {\n    action: 'logged_only',\n    message: `No action required for ${items.length} low-severity alerts`,\n    timestamp: new Date().toISOString(),\n    alerts_processed: items.length,\n    details: items.map(item => item.json.rule_name || 'Unknown')\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -48,
+        192
+      ],
+      "id": "f2ae4501-c7f5-4776-9b3b-66a964cdfeab",
+      "name": "Nodo 8: Log Only (no)"
+    },
+    {
+      "parameters": {
+        "jsCode": "const alerts = $input.all();\n\nconsole.log(`Storing ${alerts.length} alerts in database...`);\n\ntry {\n    const postgresConfig = {\n    host: 'postgres',\n    port: 5432,\n    database: 'security_monitoring',\n    user: 'db_user',\n    password: 'db_pass'\n  };\n  \n  const { Client } = require('pg');\n  const client = new Client(postgresConfig);\n  await client.connect();\n  \n  const storedAlerts = [];\n  \n  for (const item of alerts) {\n    const alert = item.json;\n    \n    const result = await client.query(`\n      INSERT INTO alerts (\n        timestamp, severity, category, source_ip,\n        target_host, event_count, description,\n        raw_log, status, rule_id, rule_name\n      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)\n      RETURNING id, timestamp\n    `, [\n      new Date().toISOString(),\n      alert.severity,\n      alert.category || 'general',\n      alert.source_ip || null,\n      alert.target_host || 'n8n-server',\n      alert.event_count || 1,\n      alert.description || 'No description',\n      JSON.stringify(alert.raw_logs || [alert.raw] || []),\n      'new',\n      alert.rule_id || null,\n      alert.rule_name || 'Unknown'\n    ]);\n    \n    const dbAlert = result.rows[0];\n    alert.alert_id = dbAlert.id;\n    alert.db_timestamp = dbAlert.timestamp;\n    alert.stored = true;\n    \n    console.log(`✓ Alert stored: ID ${alert.alert_id} - ${alert.rule_name}`);\n    \n    if (alert.source_ip && alert.source_ip !== 'unknown') {\n      await client.query(`\n        INSERT INTO attack_patterns \n          (pattern_type, source_ip, target_host, occurrence_count)\n        VALUES ($1, $2, $3, $4)\n        ON CONFLICT (source_ip, pattern_type) \n        DO UPDATE SET\n          last_seen = CURRENT_TIMESTAMP,\n          occurrence_count = attack_patterns.occurrence_count + EXCLUDED.occurrence_count\n        RETURNING id\n      `, [\n        alert.category || 'general',\n        alert.source_ip,\n        alert.target_host || 'n8n-server',\n        alert.event_count || 1\n      ]);\n      \n      console.log(`✓ Pattern updated for IP: ${alert.source_ip}`);\n    }\n    \n    storedAlerts.push({ json: alert });\n  }\n  \n  await client.end();\n  return storedAlerts;\n  \n} catch (error) {\n  console.error('❌ Database error:', error.message);\n  \n  return alerts.map(item => {\n    const alert = item.json;\n    alert.alert_id = `SIM-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;\n    alert.stored = false;\n    alert.db_error = error.message;\n    console.log(`⚠️ Alert simulated (DB offline): ${alert.alert_id}`);\n    return { json: alert };\n  });\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "84789229-637d-4f74-bdd1-b22e8ce6c156",
+      "name": "nodo 6: Alertas en Postgre (si)"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst notifications = $input.all();\n\nconsole.log(`Workflow completed. Sent ${notifications.length / 2} alerts (email + slack)`);\n\nconst summary = {\n  timestamp: new Date().toISOString(),\n  workflow: 'security_monitoring',\n  status: 'completed',\n  alerts_processed: notifications.length / 2, \n  notifications_sent: notifications.length,\n  next_run: new Date(Date.now() + 5 * 60000).toISOString() \n};\n\nconsole.log('Summary:', JSON.stringify(summary, null, 2));\n\nreturn [{\n  json: summary\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "067a422a-89e8-4f01-b9bc-c2a17074908f",
+      "name": "nodo 9: resumen"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "nodo 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "nodo 2": {
+      "main": [
+        [
+          {
+            "node": "nodo 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "nodo 3": {
+      "main": [
+        [
+          {
+            "node": "nodo 4: detectar leyes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "nodo 6: Alertas en Postgre (si)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Nodo 8: Log Only (no)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "nodo 4: detectar leyes": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "nodo 7: notificaciones": {
+      "main": [
+        [
+          {
+            "node": "nodo 9: resumen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "nodo 6: Alertas en Postgre (si)": {
+      "main": [
+        [
+          {
+            "node": "nodo 7: notificaciones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "7e17f520-3406-4132-92db-8cf4ad098f34",
+  "meta": {
+    "instanceId": "a142ec959cd4142dc77e59b7871393e1b43441c45ff4268392e2834d9faabbde"
+  },
+  "id": "Cn3Byi9roW5Jzj7Y",
+  "tags": []
+}
