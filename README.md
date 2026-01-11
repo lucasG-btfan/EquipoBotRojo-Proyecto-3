@@ -1,4 +1,6 @@
-# Comandos para creacion de clientes y visualización de logs
+# EJERCICIO 1:
+
+## Comandos para creacion de clientes y visualización de logs
 
 ## Creacion de clientes (asociados a la red equipobotrojoproyecto3_default )
 docker run --rm -it --network equipobotrojoproyecto3_default --name client1 alpine sh
@@ -20,13 +22,15 @@ PS C:\Users\rafan\OneDrive\Documentos\EquipoBotRojo.Proyecto3> docker exec clien
 PS C:\Users\rafan\OneDrive\Documentos\EquipoBotRojo.Proyecto3> docker exec -it syslog-ng cat /var/log/centralized/all.log
 
 ### Aclaracion
-El contenido de esta version esta diseñado para cumplir con las consignas del ejercicio 1 y 2 (parte 1) del github: 
+El contenido de esta version esta diseñado para cumplir con las consignas del ejercicio 1 y 2 del github: 
 Ejercicio 1:
 - Syslog-ng configurado como servidor central
 - Tres clientes simulados enviando logs
 - Verificacion de recepcion centralizada
 Ejercicio 2:
 - Crear 5 reglas personalizadas de deteccion
+- Workflow de n8n
+- Alerta de prueba
 
 PS C:\Users\rafan\OneDrive\Documentos\EquipoBotRojo.Proyecto3> docker exec -it syslog-ng cat /var/log/security/alerts.log
 cat: /var/log/security/alerts.log: No such file or directory
@@ -42,14 +46,16 @@ filter f_ssh_failed {
 
 Esta parte: facility(auth, authpriv); dificulta la creacion de logs manuales, pero el sistema funciona correctamente.
 
+# EJERCICIO 2:
+
 El paso de instalacion de Elasticsearch (paso 3) se realiza mediante Docker Compose en lugar de instalacion directa sobre el sistema operativo, cumpliendo la misma funcionalidad de forma portable y reproducible.
 
 Para el paso 4, se usa el comando Invoke-WebRequest -UseBasicParsing http://localhost:9200/_cat/indices?v para comprobar que la conexion entre elasticsearch y logstash funcione.
 
 Para el paso 5, se creo una carpeta llamada db donde esta el archivo schema.sql, donde esta la creacion de tablas e indices (la creacion de la base de datos esta comentada porque Docker ya se encarga de eso, por lo que daria error) 
 
-## flujos de n8n
-cada nodo:
+## Flujos de n8n
+Descripcion de cada nodo:
 1. Schedule Trigger: "Despierta" cada 5 minutos para iniciar el análisis
 2. Simulate Logs: Fabrica eventos de seguridad como si vinieran de syslog
 3. Parse Logs: Extrae IPs, usuarios, tipos de ataque de texto crudo
@@ -59,3 +65,61 @@ cada nodo:
 7. Send Notifications: Prepara avisos (en consola, listos para email/Slack)
 8. Log Only (rama NO): Registra que no pasó nada importante
 9. Update Patterns: Cierra el ciclo, actualiza estadísticas
+
+# Sistema de Monitoreo de Seguridad - Resultados
+
+### Resultados de la Prueba 
+
+SELECT
+    '✅ WORKFLOW FUNCIONAL' as estado,
+    COUNT(*) as total_alertas,
+    COUNT(CASE WHEN severity = 'high' THEN 1 END) as alertas_high,
+    COUNT(CASE WHEN severity = 'medium' THEN 1 END) as alertas_medium,
+    COUNT(CASE WHEN severity = 'low' THEN 1 END) as alertas_low,
+    MAX(timestamp) as ultima_alerta,
+    'PostgreSQL + n8n + syslog-ng' as componentes
+FROM alerts;
+
+Resultado:
+
+WORKFLOW FUNCIONAL | 4 alertas total | 2 HIGH | 1 MEDIUM | 1 LOW
+
+Arquitectura Implementada:
+
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│  syslog-ng  │───▶│    n8n      │───▶│ PostgreSQL  │───▶│ Elasticsearch│
+│  (Puerto 514)│    │(Workflows)  │    │   (BD)      │    │  (Opcional)  │
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+        │                  │                   │                  │
+        ▼                  ▼                   ▼                  ▼
+   Logs del sistema   Procesamiento       Almacenamiento      Búsqueda/Análisis
+
+Consulta a postgre para ver las alertas generadas:
+
+SELECT id, severity, rule_id, source_ip, status, LEFT(description, 50) 
+FROM alerts ORDER BY id DESC LIMIT 10;
+
+### Ver alertas en PostgreSQL
+docker exec security-postgres psql -U db_user -d security_monitoring -c "SELECT * FROM alerts;"
+
+### Ver reglas de detección
+docker exec security-postgres psql -U db_user -d security_monitoring -c "SELECT * FROM detection_rules;"
+
+Con este paso hemos logrado:
+ - Comunicación entre contenedores
+ - Workflow n8n ejecutándose automáticamente
+ - Alertas clasificadas por severidad (High/Medium/Low)
+ - Datos persistentes en PostgreSQL
+ - Reglas de detección personalizadas configuradas
+ - Notificaciones preparadas (email/Slack)
+
+# Fuentes de informacion
+ - El curso de videos del profesor Ariel Enferrel acerca de Docker.
+ - GitHub proporcionado por los profesores. Esto fue de vital importancia para las partes de Syslog-ng (archivo .conf), Logstash y la creacion de la base de datos de PostgreSQL, ademas de los nodos de N8N.
+ - Consultas a IA sobre solucion de problemas puntuales, por ejemplo, personalizaciones o cambios pequeños en el syslog.conf, para que pueda funcionar.
+ - Videos de N8N: 
+   https://www.youtube.com/watch?v=3IvcIPDGB1k
+   https://www.youtube.com/watch?v=llzEpKUxl9E&list=PLMd59HZRUmEjuFxu8hsAvErZkn0_W-A6b (Proporcionado por los profesores)
+
+
+
