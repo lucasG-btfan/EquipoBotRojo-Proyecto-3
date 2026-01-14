@@ -113,10 +113,29 @@ Con este paso hemos logrado:
  - Reglas de detección personalizadas configuradas
  - Notificaciones preparadas (email/Slack)
 
+
+# EJERCICIO 3
+
+Para cumplir la consigna 1 hay que tener varias consideraciones en cuenta:
+Primero, en N8N se modificó levemente el nodo 4, el encargado de pasar los datos procesados correctamente para su posterior envío. Además, se creó un nodo HTTP Request (Post) para enviar los datos a Logstash (http://logstash:8080).
+Por otro lado, se deben enviar los datos desde Logstash hacia ElasticSearch, para su posterior visualizacion (Grafana/Kibana). Presentamos algunos problemas puntuales:
+- A diferencia de una empresa, al estar trabajando desde una sola computadora, tuvimos que colocar un comando para que ElasticSearch no generara replicas. Esto ocurre debido a que  busca crear copias de los datos enviados en otro lugar, pero al tener una sola computadora, no es posible. 
+
+Solucion: $template = '{"index_patterns": ["security-logs-*"], "template": {"settings": {"number_of_replicas": 0}}}'; Invoke-RestMethod -Method Put -Uri "http://localhost:9200/_index_template/logs_template" -ContentType "application/json" -Body $template
+
+- Al tener poco espacio de almacenamiento, ElasticSearch bloquea la entrada y niega el traspaso de datos.
+
+Solucion: $settings = '{"transient": {"cluster.routing.allocation.disk.threshold_enabled": false}}'; Invoke-RestMethod -Method Put -Uri "http://localhost:9200/_cluster/settings" -ContentType "application/json" -Body $settings
+Estas 2 causas hacian que al hacer el get a localhost 9200, el sistema de el estado "red", que quiere decir que no es funcional. Al solucionar estos problemas, el estado paso a "green".
+
+Como se llevan los datos a elastic: Activamos el workflow de N8N. Para ver si resulto, escribimos este comando en la terminal: Invoke-RestMethod -Method Get -Uri "http://localhost:9200/_cat/indices?v". Este comando invoca un metodo especial, le decimos que es de tipo get, y especificamos la URL a la cual queremos consultar.
+
+
 # Fuentes de informacion
  - El curso de videos del profesor Ariel Enferrel acerca de Docker.
  - GitHub proporcionado por los profesores. Esto fue de vital importancia para las partes de Syslog-ng (archivo .conf), Logstash y la creacion de la base de datos de PostgreSQL, ademas de los nodos de N8N.
  - Consultas a IA sobre solucion de problemas puntuales, por ejemplo, personalizaciones o cambios pequeños en el syslog.conf, para que pueda funcionar.
+ - https://aprendiendoarduino.wordpress.com/tag/flujos-node-red/
  - Videos de N8N: 
    https://www.youtube.com/watch?v=3IvcIPDGB1k
    https://www.youtube.com/watch?v=llzEpKUxl9E&list=PLMd59HZRUmEjuFxu8hsAvErZkn0_W-A6b (Proporcionado por los profesores)

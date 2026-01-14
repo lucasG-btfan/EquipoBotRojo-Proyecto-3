@@ -60,6 +60,18 @@ services:
       - ./elastic_data:/usr/share/elasticsearch/data
     restart: always
 
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.13.0
+    container_name: logstash
+    volumes:
+      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
+      - ./logs:/var/log/security:ro
+    ports:
+      - "5044:5044"
+      - "8080:8080" 
+    depends_on:
+      - elasticsearch
+
   n8n:
     image: n8nio/n8n:latest
     container_name: n8n
