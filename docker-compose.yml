@@ -53,6 +53,7 @@ services:
       - discovery.type=single-node
       - ES_JAVA_OPTS=-Xms1g -Xmx1g
       - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false  
     ports:
       - "9200:9200"
       - "9300:9300"
@@ -60,17 +61,34 @@ services:
       - ./elastic_data:/usr/share/elasticsearch/data
     restart: always
 
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.13.0
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+    networks:
+      - elk-network
+    restart: unless-stopped
+
   logstash:
     image: docker.elastic.co/logstash/logstash:8.13.0
     container_name: logstash
     volumes:
       - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
       - ./logs:/var/log/security:ro
+      - ./logstash/geoip:/usr/share/geoip:ro  
     ports:
-      - "5044:5044"
-      - "8080:8080" 
+      - "8080:8080"
+    environment:
+      - LS_JAVA_OPTS=-Xmx256m -Xms256m
+      - XPACK_MONITORING_ENABLED=false
     depends_on:
       - elasticsearch
+    restart: unless-stopped
 
   n8n:
     image: n8nio/n8n:latest
@@ -79,6 +97,11 @@ services:
       - "5678:5678"
     environment:
       - N8N_BASIC_AUTH_ACTIVE=false
+      - N8N_CONFIG_FILES=/home/node/.n8n/config
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+      - N8N_RUNNERS_ENABLED=true
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+      - N8N_GIT_NODE_DISABLE_BARE_REPOS=true
       - DB_TYPE=postgresdb
       - DB_POSTGRESDB_HOST=postgres
       - DB_POSTGRESDB_PORT=5432
@@ -87,11 +110,9 @@ services:
       - DB_POSTGRESDB_PASSWORD=db_pass
       - N8N_DIAGNOSTICS_ENABLED=false
     volumes:
-      - n8n_data:/home/node/.n8n
-      - ./logs:/home/node/logs:ro
+      - ./n8n_config:/home/node/.n8n
     depends_on:
-      postgres:
-        condition: service_healthy
+      - postgres
     restart: unless-stopped
 
 volumes:

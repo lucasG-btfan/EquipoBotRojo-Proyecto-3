@@ -1,0 +1,529 @@
+{
+  "name": "workflow_fase-3",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1200,
+        288
+      ],
+      "id": "dc6d606b-2e09-4a50-bef6-8ccfade385db",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "const fiveMinutesAgo = new Date(Date.now() - (5 * 60 * 1000));\n\nconst simulatedLogs = [];\n\nconst logTypes = [\n  {\n    type: 'ssh_failed',\n    pattern: 'Failed password for',\n    count: Math.floor(Math.random() * 8) + 1, // 1-8 intentos\n    template: (i) => `${new Date(Date.now() - i * 30000).toISOString()} server1 sshd[${1234 + i}]: Failed password for invalid user attacker${i} from 192.168.1.${100 + i} port 22`\n  },\n  {\n    type: 'sudo_usage', \n    pattern: 'sudo: session opened',\n    count: Math.floor(Math.random() * 3) + 1,\n    template: (i) => `${new Date(Date.now() - i * 60000).toISOString()} server1 sudo: pam_unix(sudo:session): session opened for user root by admin`\n  },\n  {\n    type: 'iptables_drop',\n    pattern: 'iptables.*DROP',\n    count: Math.floor(Math.random() * 5) + 1,\n    template: (i) => `${new Date(Date.now() - i * 45000).toISOString()} firewall kernel: iptables: DROP IN=eth0 SRC=10.0.0.${i} DST=192.168.1.10 DPT=22`\n  },\n  {\n    type: 'sql_injection',\n    pattern: 'union.*select',\n    count: Math.random() > 0.7 ? 1 : 0,\n    template: () => `${new Date().toISOString()} web-server apache2: 192.168.1.50 - - [10/Dec/2024:14:30:25 +0000] \"GET /index.php?id=1' UNION SELECT NULL-- HTTP/1.1\" 200 512`\n  }\n];\n\n// Generar logs\nlogTypes.forEach(logType => {\n  for (let i = 0; i < logType.count; i++) {\n    const logTime = new Date(Date.now() - i * 30000);\n    if (logTime >= fiveMinutesAgo) {\n      simulatedLogs.push({\n        timestamp: logTime.toISOString(),\n        raw: logType.template(i),\n        file: logType.type === 'ssh_failed' ? 'failed_ssh.log' : 'alerts.log',\n        source: 'simulated'\n      });\n    }\n  }\n});\n\nif (simulatedLogs.length === 0) {\n  simulatedLogs.push({\n    timestamp: new Date().toISOString(),\n    raw: `${new Date().toISOString()} system: No security events in last 5 minutes`,\n    file: 'system.log',\n    source: 'test'\n  });\n}\n\nconsole.log(`Generated ${simulatedLogs.length} simulated logs for testing`);\nreturn simulatedLogs.map(log => ({ json: log }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1152,
+        64
+      ],
+      "id": "08dca1c2-f886-431d-a7cf-06dd2dc19060",
+      "name": "nodo 2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const alert = item.json;\n  \n  const logData = {\n    // Campos OBLIGATORIOS\n    \"source\": \"n8n\",\n    \"severity\": alert.severity || \"medium\",\n    \"rule_name\": alert.rule_name || \"Unknown\",\n    \"description\": alert.description || \"No description\",\n    \"source_ip\": alert.source_ip || \"0.0.0.0\",\n    \"timestamp\": new Date().toISOString(),\n    \n    // Campos adicionales\n    \"category\": alert.category || \"general\",\n    \"event_count\": alert.event_count || 1,\n    \n    // Para filtro Logstash\n    \"data_source\": \"n8n_workflow\"\n  };\n  \n  try {\n    const response = await $http.post({\n      url: 'http://logstash:8080',\n      body: logData,\n      headers: {\n        'Content-Type': 'application/json'\n      }\n    });\n    \n    results.push({\n      json: {\n        ...alert,\n        logstash_sent: true,\n        response: response\n      }\n    });\n    \n  } catch (error) {\n    results.push({\n      json: {\n        ...alert,\n        logstash_sent: false,\n        error: error.message\n      }\n    });\n  }\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        544,
+        320
+      ],
+      "id": "dfa45367-bc19-404e-8d81-7b397d0ebe27",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.severity }}",
+                    "rightValue": "info",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEquals"
+                    },
+                    "id": "ae1ffb72-f4ec-4b10-8f05-6c0be29138b6"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "1e1a5dda-dcc2-4514-9689-a330cbdf31e8",
+                    "leftValue": "={{ $json.severity }}",
+                    "rightValue": "info",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        256,
+        288
+      ],
+      "id": "5c85033c-5c43-43d3-ab9b-b9c4d957065b",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "jsCode": "const logs = $input.all();\n\n// 1. Definimos las reglas aquí directamente para evitar el error del módulo 'pg'\nconst rules = [\n  { id: 1, name: 'SSH Brute Force', pattern: 'Failed password', severity: 'high', threshold: 1, description: 'Fallo de login SSH' },\n  { id: 2, name: 'Port Scan', pattern: 'DPT=', severity: 'medium', threshold: 3, description: 'Escaneo de puertos detectado' },\n  { id: 3, name: 'Root Login Attempt', pattern: 'Failed password for root', severity: 'critical', threshold: 1, description: '¡Intento crítico de acceso como ROOT!' },\n  { id: 4, name: 'Kernel Oops', pattern: 'Oops', severity: 'critical', threshold: 1, description: 'Error crítico del sistema (Kernel)' },\n  { id: 5, name: 'Access Denied', pattern: 'Access denied', severity: 'high', threshold: 1, description: 'Acceso denegado a recurso' },\n  { id: 6, name: 'Service Restart', pattern: 'Started', severity: 'info', threshold: 1, description: 'Servicio reiniciado' }\n];\n\n// 2. Agrupamos los logs por IP\nconst logGroups = {};\nlogs.forEach(item => {\n  const log = item.json;\n  const ip = log.source_ip || 'unknown';\n  const key = `${log.type || 'auth'}_${ip}`;\n  if (!logGroups[key]) logGroups[key] = [];\n  logGroups[key].push(log);\n});\n\nconst alerts = [];\n\n// 3. Procesamos las reglas\nfor (const rule of rules) {\n  for (const [key, logGroup] of Object.entries(logGroups)) {\n    const matchingLogs = logGroup.filter(log => {\n      try {\n        const regex = new RegExp(rule.pattern, 'i');\n        return regex.test(log.raw);\n      } catch (e) { return false; }\n    });\n    \n    if (matchingLogs.length >= rule.threshold) {\n      alerts.push({\n        rule_id: rule.id,\n        rule_name: rule.name,\n        severity: rule.severity,\n        category: 'authentication_failure',\n        source_ip: matchingLogs[0].source_ip || 'unknown',\n        target_host: 'server1',\n        event_count: matchingLogs.length,\n        description: `${rule.description} desde ${matchingLogs[0].source_ip}`,\n        raw_log: matchingLogs[0].raw,\n        timestamp: new Date().toISOString()\n      });\n    }\n  }\n}\n\n// 4. Si no hay alertas, enviamos un estado de monitoreo\nif (alerts.length === 0) {\n  return [{\n    json: {\n      rule_name: 'Monitoring Active',\n      severity: 'info',\n      category: 'system',\n      description: 'No threats detected in logs',\n      source_ip: '0.0.0.0'\n    }\n  }];\n}\n\nreturn alerts.map(alert => ({ json: alert }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        288
+      ],
+      "id": "531494af-c69e-42d5-a51d-4aaa0717d31d",
+      "name": "nodo 4: detectar leyes"
+    },
+    {
+      "parameters": {
+        "jsCode": "const alerts = $input.all();\n\nconst notifications = [];\n\nalerts.forEach(item => {\n  const alert = item.json;\n  \n  let priority = 'normal';\n  let slackColor = '#36a64f'; \n  \n  if (alert.severity === 'critical') {\n    priority = 'urgent';\n    slackColor = '#ff0000'; // rojo\n  } else if (alert.severity === 'high') {\n    priority = 'high';\n    slackColor = '#ff9900'; // naranja\n  } else if (alert.severity === 'medium') {\n    slackColor = '#ffff00'; // amarillo\n  }\n  \n  notifications.push({\n    json: {\n      type: 'email',\n      channel: 'email',\n      to: 'security-team@example.com',\n      subject: `[${alert.severity.toUpperCase()}] ${alert.rule_name || 'Security Alert'}`,\n      body: `\nSECURITY ALERT REPORT\n=====================\nAlert ID: ${alert.alert_id || 'N/A'}\nTimestamp: ${new Date().toISOString()}\nSeverity: ${alert.severity}\nCategory: ${alert.category || 'N/A'}\n\nDETAILS:\n--------\nRule: ${alert.rule_name || 'Unknown'}\nSource IP: ${alert.source_ip || 'Unknown'}\nTarget Host: ${alert.target_host || 'Unknown'}\nEvent Count: ${alert.event_count || 1}\n\nDescription:\n${alert.description || 'No description provided'}\n\nFirst Occurrence: ${alert.first_occurrence || 'N/A'}\nLast Occurrence: ${alert.last_occurrence || 'N/A'}\n\n${alert.stored === false ? '⚠️ NOTE: Alert not stored in database (simulated)' : '✓ Stored in database'}\n${alert.db_error ? `Database Error: ${alert.db_error}` : ''}\n`,\n      priority: priority,\n      tags: ['security', alert.category || 'general', alert.severity]\n    }\n  });\n  \n  notifications.push({\n    json: {\n      type: 'slack',\n      channel: 'slack',\n      text: `Security Alert: ${alert.rule_name || 'Unknown Event'}`,\n      blocks: [\n        {\n          type: 'section',\n          text: {\n            type: 'mrkdwn',\n            text: `*${alert.severity.toUpperCase()} SECURITY ALERT*`\n          }\n        },\n        {\n          type: 'section',\n          fields: [\n            {\n              type: 'mrkdwn',\n              text: `*Rule:*\\n${alert.rule_name || 'Unknown'}`\n            },\n            {\n              type: 'mrkdwn',\n              text: `*Severity:*\\n${alert.severity}`\n            },\n            {\n              type: 'mrkdwn',\n              text: `*Source IP:*\\n${alert.source_ip || 'Unknown'}`\n            },\n            {\n              type: 'mrkdwn',\n              text: `*Events:*\\n${alert.event_count || 1}`\n            }\n          ]\n        },\n        {\n          type: 'section',\n          text: {\n            type: 'mrkdwn',\n            text: `*Description:*\\n${alert.description || 'No description'}`\n          }\n        },\n        {\n          type: 'context',\n          elements: [\n            {\n              type: 'mrkdwn',\n              text: `Alert ID: ${alert.alert_id || 'N/A'} | ${new Date().toLocaleString()}`\n            }\n          ]\n        }\n      ],\n      color: slackColor\n    }\n  });\n});\n\nconsole.log(`Prepared ${notifications.length} notifications for ${alerts.length} alerts`);\nreturn notifications;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        176
+      ],
+      "id": "461fb9e8-6a26-4fc1-992b-dffca01d8bb1",
+      "name": "nodo 7: notificaciones"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nconsole.log(`No significant alerts (${items.length} info/low severity items)`);\n\nitems.forEach(item => {\n  const alert = item.json;\n  console.log(`Info alert: ${alert.rule_name || 'Unknown'} - ${alert.description || 'No description'}`);\n});\n\nreturn [{\n  json: {\n    action: 'logged_only',\n    message: `No action required for ${items.length} low-severity alerts`,\n    timestamp: new Date().toISOString(),\n    alerts_processed: items.length,\n    details: items.map(item => item.json.rule_name || 'Unknown')\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        544
+      ],
+      "id": "a5287cff-e9ba-4b6e-b4b3-b8d046f24314",
+      "name": "Nodo 8: Log Only (no)"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst notifications = $input.all();\n\nconsole.log(`Workflow completed. Sent ${notifications.length / 2} alerts (email + slack)`);\n\nconst summary = {\n  timestamp: new Date().toISOString(),\n  workflow: 'security_monitoring',\n  status: 'completed',\n  alerts_processed: notifications.length / 2, \n  notifications_sent: notifications.length,\n  next_run: new Date(Date.now() + 5 * 60000).toISOString() \n};\n\nconsole.log('Summary:', JSON.stringify(summary, null, 2));\n\nreturn [{\n  json: summary\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        176
+      ],
+      "id": "d19367f2-47f6-4908-81c9-6a13e90c8bf6",
+      "name": "nodo 9: resumen"
+    },
+    {
+      "parameters": {
+        "fileSelector": "/home/node/logs/auth.log",
+        "options": {
+          "dataPropertyName": "data"
+        }
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        -1008,
+        288
+      ],
+      "id": "cd603587-60e9-4e63-bbb0-749aa5a8b5bf",
+      "name": "Read/Write Files from Disk"
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        -800,
+        288
+      ],
+      "id": "3e15c41b-5dbc-4727-ab23-ab095c7802eb",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Este código busca el texto venga del campo que venga\nconst items = $input.all();\n\n// Intentamos obtener el texto de 'data' o de 'text'\nconst rawText = items[0].json.data || items[0].json.text || \"\";\n\nif (!rawText) {\n  throw new Error(\"No se encontró texto en el nodo anterior. Revisa el nodo Extract from File.\");\n}\n\n// Separamos por líneas y creamos el formato que espera el Nodo 3\nconst lines = rawText.split('\\n').filter(line => line.trim() !== '');\n\nreturn lines.map(line => {\n  return {\n    json: {\n      timestamp: new Date().toISOString(),\n      raw: line,\n      file: 'auth.log',\n      source: 'real_file'\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -592,
+        288
+      ],
+      "id": "71710c9d-86bf-428d-a3f8-95353207a895",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "alerts",
+          "mode": "list",
+          "cachedResultName": "alerts"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "severity": "={{ $json.severity }}",
+            "category": "={{ $json.category }}",
+            "description": "={{ $json.description }}",
+            "status": "new",
+            "timestamp": "={{ new Date() }}",
+            "event_count": 1,
+            "source_ip": "={{ $json.source_ip }}",
+            "raw_log": "={{ $json.raw_log }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "severity",
+              "displayName": "severity",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "category",
+              "displayName": "category",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "source_host",
+              "displayName": "source_host",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "source_ip",
+              "displayName": "source_ip",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "target_host",
+              "displayName": "target_host",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "event_count",
+              "displayName": "event_count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "raw_log",
+              "displayName": "raw_log",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "assigned_to",
+              "displayName": "assigned_to",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "notes",
+              "displayName": "notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "resolved_at",
+              "displayName": "resolved_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        480,
+        176
+      ],
+      "id": "edb0943b-e08d-42ce-8c9d-772a7c7c66c7",
+      "name": "Insert rows in a table"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\n// 1. Verificar si es IP privada\nconst ip = items[0].json.source_ip || '0.0.0.0';\nconst isPrivateIP = ip.startsWith('10.') || \n                   ip.startsWith('192.168.') || \n                   (ip.startsWith('172.') && parseInt(ip.split('.')[1]) >= 16 && parseInt(ip.split('.')[1]) <= 31);\n\n// 2. Base de datos SIMULADA de threat intelligence\nconst threatDB = {\n  '192.168.1.50': { \n    reputation: 'malicious', \n    tags: ['sql_injection', 'web_attack'],\n    confidence: 0.85\n  },\n  '10.0.0.10': { \n    reputation: 'suspicious', \n    tags: ['port_scan'],\n    confidence: 0.65\n  }\n};\n\n// 3. Aplicar enriquecimiento\nitems[0].json.threat_intel = {\n  is_private_ip: isPrivateIP,\n  threat_info: threatDB[ip] || { \n    reputation: 'unknown', \n    tags: [], \n    confidence: 0 \n  },\n  geo_info: {\n    country: isPrivateIP ? 'INTERNAL' : 'UNKNOWN',\n    asn: 'N/A'\n  },\n  enrichment_timestamp: new Date().toISOString()\n};\n\n// 4. Calcular risk_score mejorado\nlet riskScore = 0;\n\n// Base por severity\nswitch(items[0].json.severity) {\n  case 'critical': riskScore = 90; break;\n  case 'high': riskScore = 70; break;\n  case 'medium': riskScore = 50; break;\n  default: riskScore = 30;\n}\n\n// Bonificación por threat intelligence\nif (items[0].json.threat_intel.threat_info.reputation === 'malicious') {\n  riskScore += 20;\n} else if (items[0].json.threat_intel.threat_info.reputation === 'suspicious') {\n  riskScore += 10;\n}\n\n// Bonificación por múltiples eventos\nif (items[0].json.event_count && items[0].json.event_count > 3) {\n  riskScore += 15;\n}\n\nitems[0].json.risk_score = Math.min(100, riskScore);\nitems[0].json.risk_level = riskScore >= 80 ? 'CRITICAL' : \n                          riskScore >= 60 ? 'HIGH' : \n                          riskScore >= 40 ? 'MEDIUM' : 'LOW';\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        48,
+        288
+      ],
+      "id": "505bb9c3-92cf-41f0-8712-07fac5220009",
+      "name": "Enriquecimiento Threat Intel"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "nodo 3": {
+      "main": [
+        [
+          {
+            "node": "nodo 4: detectar leyes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Insert rows in a table",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Nodo 8: Log Only (no)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "nodo 4: detectar leyes": {
+      "main": [
+        [
+          {
+            "node": "Enriquecimiento Threat Intel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "nodo 7: notificaciones": {
+      "main": [
+        [
+          {
+            "node": "nodo 9: resumen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "nodo 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert rows in a table": {
+      "main": [
+        [
+          {
+            "node": "nodo 7: notificaciones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enriquecimiento Threat Intel": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "2d985281-ed4d-45b6-8215-199f150fd39f",
+  "meta": {
+    "instanceId": "b7fe2b3062df1146906ca5dfc5875657dddc56a4ba36c533a820e93e65f8651b"
+  },
+  "id": "SXZ0uFHJPv2XBezQ",
+  "tags": []
+}
