@@ -14,10 +14,10 @@
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
-        -1200,
+        16,
         288
       ],
-      "id": "dc6d606b-2e09-4a50-bef6-8ccfade385db",
+      "id": "ced7dde5-f052-4ee7-a2c4-8728e6b96ae7",
       "name": "Schedule Trigger"
     },
     {
@@ -27,10 +27,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1152,
+        64,
         64
       ],
-      "id": "08dca1c2-f886-431d-a7cf-06dd2dc19060",
+      "id": "d29716ac-1c3c-4cb5-84eb-ae53286304ab",
       "name": "nodo 2"
     },
     {
@@ -40,10 +40,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        544,
+        1760,
         320
       ],
-      "id": "dfa45367-bc19-404e-8d81-7b397d0ebe27",
+      "id": "cb2bce2d-31e0-44c8-9722-b8a7d3fad9a7",
       "name": "HTTP Request"
     },
     {
@@ -103,23 +103,23 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.3,
       "position": [
-        256,
+        1472,
         288
       ],
-      "id": "5c85033c-5c43-43d3-ab9b-b9c4d957065b",
+      "id": "880c72b3-8570-49a9-93fe-5c22896651e5",
       "name": "Switch"
     },
     {
       "parameters": {
-        "jsCode": "const logs = $input.all();\n\n// 1. Definimos las reglas aquí directamente para evitar el error del módulo 'pg'\nconst rules = [\n  { id: 1, name: 'SSH Brute Force', pattern: 'Failed password', severity: 'high', threshold: 1, description: 'Fallo de login SSH' },\n  { id: 2, name: 'Port Scan', pattern: 'DPT=', severity: 'medium', threshold: 3, description: 'Escaneo de puertos detectado' },\n  { id: 3, name: 'Root Login Attempt', pattern: 'Failed password for root', severity: 'critical', threshold: 1, description: '¡Intento crítico de acceso como ROOT!' },\n  { id: 4, name: 'Kernel Oops', pattern: 'Oops', severity: 'critical', threshold: 1, description: 'Error crítico del sistema (Kernel)' },\n  { id: 5, name: 'Access Denied', pattern: 'Access denied', severity: 'high', threshold: 1, description: 'Acceso denegado a recurso' },\n  { id: 6, name: 'Service Restart', pattern: 'Started', severity: 'info', threshold: 1, description: 'Servicio reiniciado' }\n];\n\n// 2. Agrupamos los logs por IP\nconst logGroups = {};\nlogs.forEach(item => {\n  const log = item.json;\n  const ip = log.source_ip || 'unknown';\n  const key = `${log.type || 'auth'}_${ip}`;\n  if (!logGroups[key]) logGroups[key] = [];\n  logGroups[key].push(log);\n});\n\nconst alerts = [];\n\n// 3. Procesamos las reglas\nfor (const rule of rules) {\n  for (const [key, logGroup] of Object.entries(logGroups)) {\n    const matchingLogs = logGroup.filter(log => {\n      try {\n        const regex = new RegExp(rule.pattern, 'i');\n        return regex.test(log.raw);\n      } catch (e) { return false; }\n    });\n    \n    if (matchingLogs.length >= rule.threshold) {\n      alerts.push({\n        rule_id: rule.id,\n        rule_name: rule.name,\n        severity: rule.severity,\n        category: 'authentication_failure',\n        source_ip: matchingLogs[0].source_ip || 'unknown',\n        target_host: 'server1',\n        event_count: matchingLogs.length,\n        description: `${rule.description} desde ${matchingLogs[0].source_ip}`,\n        raw_log: matchingLogs[0].raw,\n        timestamp: new Date().toISOString()\n      });\n    }\n  }\n}\n\n// 4. Si no hay alertas, enviamos un estado de monitoreo\nif (alerts.length === 0) {\n  return [{\n    json: {\n      rule_name: 'Monitoring Active',\n      severity: 'info',\n      category: 'system',\n      description: 'No threats detected in logs',\n      source_ip: '0.0.0.0'\n    }\n  }];\n}\n\nreturn alerts.map(alert => ({ json: alert }));"
+        "jsCode": "const logs = $input.all();\n\n// 1. Definimos las reglas aquí directamente para evitar el error del módulo 'pg'\nconst rules = [\n  { id: 1, name: 'SSH Brute Force', pattern: 'Failed password', severity: 'high', threshold: 1, description: 'Fallo de login SSH' },\n  { id: 2, name: 'Port Scan', pattern: 'DPT=', severity: 'medium', threshold: 3, description: 'Escaneo de puertos detectado' },\n  { id: 3, name: 'Root Login Attempt', pattern: 'Failed password for root', severity: 'critical', threshold: 1, description: '¡Intento crítico de acceso como ROOT!' },\n  { id: 4, name: 'Kernel Oops', pattern: 'Oops', severity: 'critical', threshold: 1, description: 'Error crítico del sistema (Kernel)' },\n  { id: 5, name: 'Access Denied', pattern: 'Access denied', severity: 'high', threshold: 1, description: 'Acceso denegado a recurso' },\n  { id: 6, name: 'Service Restart', pattern: 'Started', severity: 'info', threshold: 1, description: 'Servicio reiniciado' }\n];\n\nconst extractIP = (text) => {\n  const ipRegex = /\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b/;\n  const match = text.match(ipRegex);\n  return match ? match[0] : '127.0.0.1'; \n};\n// 2. Agrupamos los logs por IP\nconst logGroups = {};\nlogs.forEach(item => {\n  const log = item.json;\n  const ip = (log.source_ip && log.source_ip !== 'unknown') ? log.source_ip : extractIP(log.raw || '');\n  const key = `${log.type || 'auth'}_${ip}`;\n  if (!logGroups[key]) logGroups[key] = [];\n  logGroups[key].push({...log, source_ip: ip});\n});\n\nconst alerts = [];\n\n// 3. Procesamos las reglas\nfor (const rule of rules) {\n  for (const [key, logGroup] of Object.entries(logGroups)) {\n    const matchingLogs = logGroup.filter(log => {\n      try {\n        const regex = new RegExp(rule.pattern, 'i');\n        return regex.test(log.raw);\n      } catch (e) { return false; }\n    });\n    \n    if (matchingLogs.length >= rule.threshold) {\n      alerts.push({\n        rule_id: rule.id,\n        rule_name: rule.name,\n        severity: rule.severity,\n        category: 'authentication_failure',\n        source_ip: matchingLogs[0].source_ip,\n        target_host: 'server1',\n        event_count: matchingLogs.length,\n        description: `${rule.description} desde ${matchingLogs[0].source_ip}`,\n        raw_log: matchingLogs[0].raw,\n        timestamp: new Date().toISOString()\n      });\n    }\n  }\n}\n\n// 4. Si no hay alertas, enviamos un estado de monitoreo\nif (alerts.length === 0) {\n  return [{\n    json: {\n      rule_name: 'Monitoring Active',\n      severity: 'info',\n      category: 'system',\n      description: 'No threats detected in logs',\n      source_ip: '0.0.0.0'\n    }\n  }];\n}\n\nreturn alerts.map(alert => ({ json: alert }));"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -160,
+        1056,
         288
       ],
-      "id": "531494af-c69e-42d5-a51d-4aaa0717d31d",
+      "id": "1f596134-7255-4b26-83ef-177e80a2ca09",
       "name": "nodo 4: detectar leyes"
     },
     {
@@ -129,10 +129,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        672,
+        1888,
         176
       ],
-      "id": "461fb9e8-6a26-4fc1-992b-dffca01d8bb1",
+      "id": "71441aa7-0fe9-4784-b47a-8e384c1ceaa8",
       "name": "nodo 7: notificaciones"
     },
     {
@@ -142,10 +142,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        416,
+        1632,
         544
       ],
-      "id": "a5287cff-e9ba-4b6e-b4b3-b8d046f24314",
+      "id": "94da678f-dad8-44ca-bb93-22815e68dce6",
       "name": "Nodo 8: Log Only (no)"
     },
     {
@@ -155,10 +155,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        880,
+        2096,
         176
       ],
-      "id": "d19367f2-47f6-4908-81c9-6a13e90c8bf6",
+      "id": "f0b964b2-1301-407b-a2e7-650499e767f9",
       "name": "nodo 9: resumen"
     },
     {
@@ -171,10 +171,10 @@
       "type": "n8n-nodes-base.readWriteFile",
       "typeVersion": 1,
       "position": [
-        -1008,
+        208,
         288
       ],
-      "id": "cd603587-60e9-4e63-bbb0-749aa5a8b5bf",
+      "id": "a19bcd29-6753-4ec7-add2-c3c1e2e8a69d",
       "name": "Read/Write Files from Disk"
     },
     {
@@ -185,10 +185,10 @@
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1,
       "position": [
-        -800,
+        464,
         288
       ],
-      "id": "3e15c41b-5dbc-4727-ab23-ab095c7802eb",
+      "id": "7a5de3a5-26dc-4f93-8a19-cc69c09b77b1",
       "name": "Extract from File"
     },
     {
@@ -198,10 +198,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -592,
+        752,
         288
       ],
-      "id": "71710c9d-86bf-428d-a3f8-95353207a895",
+      "id": "084a8775-5cc1-4eda-9ffd-2457cdd8c237",
       "name": "Code in JavaScript"
     },
     {
@@ -371,11 +371,17 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        480,
+        1696,
         176
       ],
-      "id": "edb0943b-e08d-42ce-8c9d-772a7c7c66c7",
-      "name": "Insert rows in a table"
+      "id": "c17411ee-c86c-45e3-9480-f0be3bc3651e",
+      "name": "Insert rows in a table",
+      "credentials": {
+        "postgres": {
+          "id": "r8E3lBSiHtUFH6fE",
+          "name": "Postgres account 2"
+        }
+      }
     },
     {
       "parameters": {
@@ -384,10 +390,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        48,
+        1264,
         288
       ],
-      "id": "505bb9c3-92cf-41f0-8712-07fac5220009",
+      "id": "c8385269-9589-4f0e-823e-03a33ae16e42",
       "name": "Enriquecimiento Threat Intel"
     }
   ],
@@ -398,17 +404,6 @@
         [
           {
             "node": "Read/Write Files from Disk",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "nodo 3": {
-      "main": [
-        [
-          {
-            "node": "nodo 4: detectar leyes",
             "type": "main",
             "index": 0
           }
@@ -482,17 +477,6 @@
         ]
       ]
     },
-    "Code in JavaScript": {
-      "main": [
-        [
-          {
-            "node": "nodo 3",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Insert rows in a table": {
       "main": [
         [
@@ -514,16 +498,28 @@
           }
         ]
       ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "nodo 4: detectar leyes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "2d985281-ed4d-45b6-8215-199f150fd39f",
+  "versionId": "165e744c-e3c6-4ddb-8b46-2a6e06937d9c",
   "meta": {
-    "instanceId": "b7fe2b3062df1146906ca5dfc5875657dddc56a4ba36c533a820e93e65f8651b"
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e9af1fd68f298f1d66e435af1bc92250ca76158be14ebd2d8c8195129d45218f"
   },
-  "id": "SXZ0uFHJPv2XBezQ",
+  "id": "WnwTXrqtQtRu0zYI",
   "tags": []
 }

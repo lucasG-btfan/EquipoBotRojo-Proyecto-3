@@ -70,8 +70,6 @@ services:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
     depends_on:
       - elasticsearch
-    networks:
-      - elk-network
     restart: unless-stopped
 
   logstash:
@@ -111,6 +109,7 @@ services:
       - N8N_DIAGNOSTICS_ENABLED=false
     volumes:
       - ./n8n_config:/home/node/.n8n
+      - ./logs:/home/node/logs
     depends_on:
       - postgres
     restart: unless-stopped
