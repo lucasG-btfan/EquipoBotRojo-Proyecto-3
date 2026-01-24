@@ -18,7 +18,10 @@ CREATE TABLE alerts (
     status VARCHAR(20) DEFAULT 'new', -- new, investigating, resolved, false_positive
     assigned_to VARCHAR(100),
     notes TEXT,
-    resolved_at TIMESTAMP
+    resolved_at TIMESTAMP,
+    risk_score INTEGER,
+    risk_level VARCHAR(20),
+    threat_reputation VARCHAR(50)
 );
 
 -- Tabla de patrones de ataque detectados

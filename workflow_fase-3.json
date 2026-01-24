@@ -14,10 +14,10 @@
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
-        16,
-        288
+        -48,
+        224
       ],
-      "id": "ced7dde5-f052-4ee7-a2c4-8728e6b96ae7",
+      "id": "edf8aa15-a846-4004-9188-f3ad4451a8a9",
       "name": "Schedule Trigger"
     },
     {
@@ -27,10 +27,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        64,
-        64
+        0,
+        0
       ],
-      "id": "d29716ac-1c3c-4cb5-84eb-ae53286304ab",
+      "id": "d0d20265-bafe-489b-9306-bd3ac1de4f8a",
       "name": "nodo 2"
     },
     {
@@ -40,10 +40,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1760,
-        320
+        1792,
+        288
       ],
-      "id": "cb2bce2d-31e0-44c8-9722-b8a7d3fad9a7",
+      "id": "29272aa4-e83f-41cb-ad08-b8e4e0272838",
       "name": "HTTP Request"
     },
     {
@@ -103,10 +103,10 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.3,
       "position": [
-        1472,
-        288
+        1408,
+        224
       ],
-      "id": "880c72b3-8570-49a9-93fe-5c22896651e5",
+      "id": "1acab213-3347-4ad0-a561-925b569333b1",
       "name": "Switch"
     },
     {
@@ -116,24 +116,25 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1056,
-        288
+        992,
+        224
       ],
-      "id": "1f596134-7255-4b26-83ef-177e80a2ca09",
+      "id": "7b883f49-a24f-44eb-9965-3f79969fd370",
       "name": "nodo 4: detectar leyes"
     },
     {
       "parameters": {
-        "jsCode": "const alerts = $input.all();\n\nconst notifications = [];\n\nalerts.forEach(item => {\n  const alert = item.json;\n  \n  let priority = 'normal';\n  let slackColor = '#36a64f'; \n  \n  if (alert.severity === 'critical') {\n    priority = 'urgent';\n    slackColor = '#ff0000'; // rojo\n  } else if (alert.severity === 'high') {\n    priority = 'high';\n    slackColor = '#ff9900'; // naranja\n  } else if (alert.severity === 'medium') {\n    slackColor = '#ffff00'; // amarillo\n  }\n  \n  notifications.push({\n    json: {\n      type: 'email',\n      channel: 'email',\n      to: 'security-team@example.com',\n      subject: `[${alert.severity.toUpperCase()}] ${alert.rule_name || 'Security Alert'}`,\n      body: `\nSECURITY ALERT REPORT\n=====================\nAlert ID: ${alert.alert_id || 'N/A'}\nTimestamp: ${new Date().toISOString()}\nSeverity: ${alert.severity}\nCategory: ${alert.category || 'N/A'}\n\nDETAILS:\n--------\nRule: ${alert.rule_name || 'Unknown'}\nSource IP: ${alert.source_ip || 'Unknown'}\nTarget Host: ${alert.target_host || 'Unknown'}\nEvent Count: ${alert.event_count || 1}\n\nDescription:\n${alert.description || 'No description provided'}\n\nFirst Occurrence: ${alert.first_occurrence || 'N/A'}\nLast Occurrence: ${alert.last_occurrence || 'N/A'}\n\n${alert.stored === false ? '⚠️ NOTE: Alert not stored in database (simulated)' : '✓ Stored in database'}\n${alert.db_error ? `Database Error: ${alert.db_error}` : ''}\n`,\n      priority: priority,\n      tags: ['security', alert.category || 'general', alert.severity]\n    }\n  });\n  \n  notifications.push({\n    json: {\n      type: 'slack',\n      channel: 'slack',\n      text: `Security Alert: ${alert.rule_name || 'Unknown Event'}`,\n      blocks: [\n        {\n          type: 'section',\n          text: {\n            type: 'mrkdwn',\n            text: `*${alert.severity.toUpperCase()} SECURITY ALERT*`\n          }\n        },\n        {\n          type: 'section',\n          fields: [\n            {\n              type: 'mrkdwn',\n              text: `*Rule:*\\n${alert.rule_name || 'Unknown'}`\n            },\n            {\n              type: 'mrkdwn',\n              text: `*Severity:*\\n${alert.severity}`\n            },\n            {\n              type: 'mrkdwn',\n              text: `*Source IP:*\\n${alert.source_ip || 'Unknown'}`\n            },\n            {\n              type: 'mrkdwn',\n              text: `*Events:*\\n${alert.event_count || 1}`\n            }\n          ]\n        },\n        {\n          type: 'section',\n          text: {\n            type: 'mrkdwn',\n            text: `*Description:*\\n${alert.description || 'No description'}`\n          }\n        },\n        {\n          type: 'context',\n          elements: [\n            {\n              type: 'mrkdwn',\n              text: `Alert ID: ${alert.alert_id || 'N/A'} | ${new Date().toLocaleString()}`\n            }\n          ]\n        }\n      ],\n      color: slackColor\n    }\n  });\n});\n\nconsole.log(`Prepared ${notifications.length} notifications for ${alerts.length} alerts`);\nreturn notifications;"
+        "jsCode": "const alerts = $input.all();\n\nconst notifications = [];\n\nalerts.forEach(item => {\n  const alert = item.json;\n  \n  let priority = 'normal';\n  let slackColor = '#36a64f'; \n  \n  if (alert.severity === 'critical') {\n    priority = 'urgent';\n    slackColor = '#ff0000'; // rojo\n  } else if (alert.severity === 'high') {\n    priority = 'high';\n    slackColor = '#ff9900'; // naranja\n  } else if (alert.severity === 'medium') {\n    slackColor = '#ffff00'; // amarillo\n  }\n  if (alert.severity === 'critical' || alert.severity === 'high') {\n  notifications.push({\n    json: {\n      type: 'email',\n      channel: 'email',\n      to: 'security-team@example.com',\n      subject: `[${alert.severity.toUpperCase()}] ${alert.rule_name || 'Security Alert'}`,\n      body: `\nSECURITY ALERT REPORT\n=====================\nAlert ID: ${alert.alert_id || 'N/A'}\nTimestamp: ${new Date().toISOString()}\nSeverity: ${alert.severity}\nCategory: ${alert.category || 'N/A'}\n\nDETAILS:\n--------\nRule: ${alert.rule_name || 'Unknown'}\nSource IP: ${alert.source_ip || 'Unknown'}\nTarget Host: ${alert.target_host || 'Unknown'}\nEvent Count: ${alert.event_count || 1}\nRisk Level: ${alert.risk_level || 'N/A'}\nRisk Score: ${alert.risk_score || 0}\nReputation: ${alert.threat_intel?.threat_info?.reputation || 'unknown'}\nTarget Host: ${alert.target_host || 'unknown'}\n\nDescription:\n${alert.description || 'No description provided'}\n\nFirst Occurrence: ${alert.first_occurrence || 'N/A'}\nLast Occurrence: ${alert.last_occurrence || 'N/A'}\n\n${alert.stored === false ? '⚠️ NOTE: Alert not stored in database (simulated)' : '✓ Stored in database'}\n${alert.db_error ? `Database Error: ${alert.db_error}` : ''}\n`,\n      priority: priority,\n      tags: ['security', alert.category || 'general', alert.severity]\n    }\n  });\n  \n  notifications.push({\n    json: {\n      type: 'slack',\n      channel: 'slack',\n      text: `Security Alert: ${alert.rule_name || 'Unknown Event'}`,\n      blocks: [\n        {\n          type: 'section',\n          text: {\n            type: 'mrkdwn',\n            text: `*${alert.severity.toUpperCase()} SECURITY ALERT*`\n          }\n        },\n        {\n          type: 'section',\n          fields: [\n            {\n              type: 'mrkdwn',\n              text: `*Rule:*\\n${alert.rule_name || 'Unknown'}`\n            },\n            {\n              type: 'mrkdwn',\n              text: `*Severity:*\\n${alert.severity}`\n            },\n            {\n              type: 'mrkdwn',\n              text: `*Source IP:*\\n${alert.source_ip || 'Unknown'}`\n            },\n            {\n              type: 'mrkdwn',\n              text: `*Events:*\\n${alert.event_count || 1}`\n            },\n            {\n              type: 'mrkdwn',\n              text: `*Risk:*\\n${alert.risk_level} (${alert.risk_score})`\n            }\n          ]\n        },\n        {\n          type: 'section',\n          text: {\n            type: 'mrkdwn',\n            text: `*Description:*\\n${alert.description || 'No description'}`\n          }\n        },\n        {\n          type: 'context',\n          elements: [\n            {\n              type: 'mrkdwn',\n              text: `Alert ID: ${alert.alert_id || 'N/A'} | ${new Date().toLocaleString()}`\n            }\n          ]\n        }\n      ],\n      color: slackColor\n   }\n    });\n  }\n}); // Cierre del forEach\n\nconsole.log(`Prepared ${notifications.length} notifications for ${alerts.length} alerts`);\nreturn notifications;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1888,
-        176
+        1824,
+        112
       ],
-      "id": "71441aa7-0fe9-4784-b47a-8e384c1ceaa8",
-      "name": "nodo 7: notificaciones"
+      "id": "3661ffa0-7f61-4f94-9ec6-76cd17c485a4",
+      "name": "nodo 7: notificaciones",
+      "retryOnFail": true
     },
     {
       "parameters": {
@@ -142,10 +143,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1632,
-        544
+        1568,
+        480
       ],
-      "id": "94da678f-dad8-44ca-bb93-22815e68dce6",
+      "id": "3f85e824-77b4-4156-bf98-c62ede27aad2",
       "name": "Nodo 8: Log Only (no)"
     },
     {
@@ -155,10 +156,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2096,
-        176
+        2032,
+        112
       ],
-      "id": "f0b964b2-1301-407b-a2e7-650499e767f9",
+      "id": "aaef1b31-e6cc-459e-a5d1-bfa6d7c7665e",
       "name": "nodo 9: resumen"
     },
     {
@@ -171,10 +172,10 @@
       "type": "n8n-nodes-base.readWriteFile",
       "typeVersion": 1,
       "position": [
-        208,
-        288
+        144,
+        224
       ],
-      "id": "a19bcd29-6753-4ec7-add2-c3c1e2e8a69d",
+      "id": "c5480a23-632e-438b-837f-8f7b6934d485",
       "name": "Read/Write Files from Disk"
     },
     {
@@ -185,10 +186,10 @@
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1,
       "position": [
-        464,
-        288
+        400,
+        224
       ],
-      "id": "7a5de3a5-26dc-4f93-8a19-cc69c09b77b1",
+      "id": "d78495bb-4d15-4c19-b6d9-75352b8b6ee7",
       "name": "Extract from File"
     },
     {
@@ -198,10 +199,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        752,
-        288
+        688,
+        224
       ],
-      "id": "084a8775-5cc1-4eda-9ffd-2457cdd8c237",
+      "id": "5d069544-ce4c-4ce2-962c-e9c8b182dfac",
       "name": "Code in JavaScript"
     },
     {
@@ -227,7 +228,10 @@
             "timestamp": "={{ new Date() }}",
             "event_count": 1,
             "source_ip": "={{ $json.source_ip }}",
-            "raw_log": "={{ $json.raw_log }}"
+            "raw_log": "={{ $json.raw_log }}",
+            "risk_score": "={{ $json.risk_score }}",
+            "risk_level": "={{ $json.risk_level }}",
+            "threat_reputation": "={{ $json.threat_intel.threat_info.reputation }}"
           },
           "matchingColumns": [
             "id"
@@ -361,6 +365,36 @@
               "display": true,
               "type": "dateTime",
               "canBeUsedToMatch": true
+            },
+            {
+              "id": "risk_score",
+              "displayName": "risk_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "risk_level",
+              "displayName": "risk_level",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "threat_reputation",
+              "displayName": "threat_reputation",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
             }
           ],
           "attemptToConvertTypes": false,
@@ -372,14 +406,15 @@
       "typeVersion": 2.6,
       "position": [
         1696,
-        176
+        96
       ],
-      "id": "c17411ee-c86c-45e3-9480-f0be3bc3651e",
+      "id": "0e9c5f12-3fcc-4554-bc88-f63c0aa95dc7",
       "name": "Insert rows in a table",
+      "retryOnFail": true,
       "credentials": {
         "postgres": {
-          "id": "r8E3lBSiHtUFH6fE",
-          "name": "Postgres account 2"
+          "id": "5oNla0FyawiUWphG",
+          "name": "Postgres account"
         }
       }
     },
@@ -390,11 +425,79 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1264,
+        1200,
+        224
+      ],
+      "id": "a39b084c-fbb3-4826-b0d3-c3d4628d92f9",
+      "name": "Enriquecimiento Threat Intel"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "eff1dded-b11d-4935-8b10-34be76f9f3ee",
+              "leftValue": "={{ $json.risk_level }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        1536,
+        112
+      ],
+      "id": "37ec18d0-ddf3-4201-861f-bf7ea60acdc9",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "eff1dded-b11d-4935-8b10-34be76f9f3ee",
+              "leftValue": "={{ $json.risk_level }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        1600,
         288
       ],
-      "id": "c8385269-9589-4f0e-823e-03a33ae16e42",
-      "name": "Enriquecimiento Threat Intel"
+      "id": "bd785d63-76ab-43cf-98b4-118b6e7b2a8b",
+      "name": "Filter1"
     }
   ],
   "pinData": {},
@@ -414,12 +517,12 @@
       "main": [
         [
           {
-            "node": "Insert rows in a table",
+            "node": "Filter",
             "type": "main",
             "index": 0
           },
           {
-            "node": "HTTP Request",
+            "node": "Filter1",
             "type": "main",
             "index": 0
           }
@@ -509,17 +612,39 @@
           }
         ]
       ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Insert rows in a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "165e744c-e3c6-4ddb-8b46-2a6e06937d9c",
+  "versionId": "317bf002-d021-49e2-9e4d-d78ce282ec38",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "e9af1fd68f298f1d66e435af1bc92250ca76158be14ebd2d8c8195129d45218f"
   },
-  "id": "WnwTXrqtQtRu0zYI",
+  "id": "u58gEaHKc0UCbk9h",
   "tags": []
 }
