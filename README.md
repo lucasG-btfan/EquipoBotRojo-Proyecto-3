@@ -130,6 +130,36 @@ Estas 2 causas hacian que al hacer el get a localhost 9200, el sistema de el est
 
 Como se llevan los datos a elastic: Activamos el workflow de N8N. Para ver si resulto, escribimos este comando en la terminal: Invoke-RestMethod -Method Get -Uri "http://localhost:9200/_cat/indices?v". Este comando invoca un metodo especial, le decimos que es de tipo get, y especificamos la URL a la cual queremos consultar.
 
+# Security Monitoring System - ELK + n8n
+
+## Sistema de Monitoreo de Seguridad
+
+### Componentes
+- **Elasticsearch**: Almacenamiento y búsqueda (puerto 9200)
+- **Kibana**: Visualización y dashboards (puerto 5601)
+- **Logstash**: Procesamiento de logs (puertos 8080, 8081)
+- **n8n**: Automatización y generación de alertas (puerto 5678)
+- **PostgreSQL**: Base de datos para n8n (puerto 5432)
+
+### Flujo de Datos
+1. n8n workflow genera alertas de seguridad
+2. HTTP POST → Logstash:8081 (endpoint: /n8n-alerts)
+3. Logstash procesa y envía a Elasticsearch
+4. Índice: `n8n-alerts-YYYY.MM.dd`
+5. Data View en Kibana: `n8n-alerts`
+6. Dashboard de monitoreo
+
+### Estructura de Alertas
+```json
+{
+  "timestamp": "2024-01-19T12:30:00Z",
+  "source_ip": "192.168.1.100",
+  "severity": "high",
+  "rule_name": "Failed Login Attempts",
+  "source": "n8n",
+  "threat_score": 75,
+  "message": "Multiple failed login attempts detected"
+}
 
 # Fuentes de informacion
  - El curso de videos del profesor Ariel Enferrel acerca de Docker.
