@@ -1,0 +1,193 @@
+{
+  "name": "worflow_fas_4_Auto-bloqueo",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "/webhook/auto-block",
+        "responseMode": "onReceived",
+        "options": {
+          "Response Data": "Last Node",
+          "No Response Body": "Desactivado"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [
+        896,
+        -272
+      ],
+      "id": "27a92031-11fb-4986-889a-eb00bf4a14cd",
+      "name": "Webhook",
+      "webhookId": "auto-block-webhook"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO blocked_ips (ip_address, threat_score, reason, blocked_until, is_active) VALUES ($1, $2, $3, $4, true) ON CONFLICT (ip_address) DO UPDATE SET threat_score = EXCLUDED.threat_score, reason = EXCLUDED.reason, blocked_until = EXCLUDED.blocked_until, is_active = true RETURNING *",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1488,
+        -416
+      ],
+      "id": "d9721a0c-8103-4667-988b-57d1b07bf5f6",
+      "name": "Insertar IP Bloqueada",
+      "credentials": {
+        "postgres": {
+          "id": "xQDinEhC3bDgBeQn",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const alert = $input.first().json;\n\n// Lógica de decisión de bloqueo\nconst threatScore = alert.threat_score || 0;\nconst severity = alert.severity || 'medium';\n\n// Configurar tiempos de bloqueo\nlet blockedUntil = new Date();\n\nif (threatScore >= 80 || severity === 'critical') {\n  // Bloqueo permanente (30 días)\n  blockedUntil.setDate(blockedUntil.getDate() + 30);\n} else if (threatScore >= 60 || severity === 'high') {\n  // Bloqueo temporal (24 horas)\n  blockedUntil.setHours(blockedUntil.getHours() + 24);\n} else {\n  // No bloquear\n  return [{\n    json: {\n      ...alert,\n      block_decision: 'no_block',\n      reason: 'Umbral no alcanzado'\n    }\n  }];\n}\n\n// Preparar datos para bloqueo\nalert.blocked_until = blockedUntil.toISOString();\nalert.block_decision = 'block';\nalert.block_timestamp = new Date().toISOString();\n\n// Si es una IP interna, solo registrar sin bloquear en firewall\nconst isPrivateIP = alert.source_ip.startsWith('10.') || \n                   alert.source_ip.startsWith('192.168.') || \n                   alert.source_ip.startsWith('172.16.');\n\nalert.is_private_ip = isPrivateIP;\n\nalert.firewall_action = isPrivateIP ? 'log_only' : 'block';\n\nreturn [{\n  json: alert\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1072,
+        -272
+      ],
+      "id": "b9ea36c4-0eb3-40b7-a673-fc734b782317",
+      "name": "Lógica de Decisión"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\n\n// Solo ejecutar si no es IP privada y la decisión es bloquear\nif (item.block_decision === 'block' && !item.is_private_ip) {\n  try {\n    // Aquí iría el comando real de bloqueo en iptables\n    // Para testing, simulamos el comando\n    const command = `iptables -A INPUT -s ${item.source_ip} -j DROP && iptables -A OUTPUT -d ${item.source_ip} -j DROP`;\n    \n    // En un entorno real, usarías el nodo SSH o Execute Command\n    // Por ahora, solo log\n    console.log(`[SIMULADO] Ejecutar: ${command}`);\n    \n    item.firewall_command = command;\n    item.firewall_executed = true;\n    \n  } catch (error) {\n    item.firewall_executed = false;\n    item.firewall_error = error.message;\n  }\n}\n\nreturn [{\n  json: item\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1696,
+        -416
+      ],
+      "id": "2b57f488-adcf-4d1d-bbca-d60772570206",
+      "name": "Acción Firewall"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "block-check",
+              "leftValue": "={{ $json.block_decision }}",
+              "rightValue": "block",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.1,
+      "position": [
+        1216,
+        -272
+      ],
+      "id": "b8bbcd3f-54f0-46d4-be80-16cd39476b2d",
+      "name": "¿Bloquear?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $input.first().json;\n\n// Generar reporte de bloqueo\nconst report = {\n  timestamp: new Date().toISOString(),\n  action: 'ip_blocking',\n  status: result.block_decision === 'block' ? 'blocked' : 'not_blocked',\n  details: {\n    ip: result.source_ip,\n    threat_score: result.threat_score,\n    severity: result.severity,\n    reason: result.reason,\n    blocked_until: result.blocked_until,\n    firewall_executed: result.firewall_executed || false\n  },\n  workflow: 'auto_blocking_v1'\n};\n\nconsole.log('Reporte de bloqueo:', JSON.stringify(report, null, 2));\n\n// También enviar a Logstash para registro\nif (result.block_decision === 'block') {\n  try {\n    await $http.post({\n      url: 'http://logstash:8081',\n      body: {\n        ...report,\n        type: 'ip_block_event',\n        source: 'n8n_auto_block'\n      },\n      headers: { 'Content-Type': 'application/json' }\n    });\n  } catch (error) {\n    console.log('Error enviando a Logstash:', error.message);\n  }\n}\n\nreturn [{ json: report }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        -256
+      ],
+      "id": "99e1ddbd-2a36-45f1-aadd-a25db867b4e1",
+      "name": "Generar Reporte"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Lógica de Decisión",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lógica de Decisión": {
+      "main": [
+        [
+          {
+            "node": "¿Bloquear?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Bloquear?": {
+      "main": [
+        [
+          {
+            "node": "Insertar IP Bloqueada",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Generar Reporte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insertar IP Bloqueada": {
+      "main": [
+        [
+          {
+            "node": "Acción Firewall",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Acción Firewall": {
+      "main": [
+        [
+          {
+            "node": "Generar Reporte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "a8db5335-d1fa-4d44-a31a-467e494d4b28",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "62a476d001d9b5667943139795e50ef1df67c5e4cc02e91414150a16123dcae4"
+  },
+  "id": "xKhS7bDRxlEXbNyE",
+  "tags": []
+}
