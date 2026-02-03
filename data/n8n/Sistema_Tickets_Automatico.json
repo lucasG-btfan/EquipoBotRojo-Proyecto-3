@@ -3,33 +3,31 @@
   "nodes": [
     {
       "parameters": {
+        "httpMethod": "POST",
         "path": "/webhook/create-ticket",
-        "responseMode": "onReceived",
-        "options": {
-          "Response Data": "Last Node"
-        }
+        "options": {}
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1.1,
       "position": [
-        -608,
-        112
+        -704,
+        80
       ],
-      "id": "2f323936-3a3e-4b7f-be1f-3f0eca81f1f9",
+      "id": "85188dfd-35c8-45e5-8ef6-86043a65fa62",
       "name": "Webhook Tickets",
       "webhookId": "ticket-webhook"
     },
     {
       "parameters": {
-        "jsCode": "const alert = $input.first().json;\n\n// Generar número de ticket único\nconst ticketNumber = 'TICKET-' + \n  new Date().getFullYear().toString().slice(-2) + \n  ('0' + (new Date().getMonth() + 1)).slice(-2) + \n  ('0' + new Date().getDate()).slice(-2) + \n  '-' + \n  Math.random().toString(36).substr(2, 6).toUpperCase();\n\n// Determinar prioridad\nfunction getPriority(severity, riskScore) {\n  if (severity === 'critical' || riskScore >= 80) return 'high';\n  if (severity === 'high' || riskScore >= 60) return 'medium';\n  return 'low';\n}\n\n// Determinar categoría\nfunction getCategory(ruleName) {\n  const rule = ruleName.toLowerCase();\n  if (rule.includes('ssh') || rule.includes('login')) return 'Authentication';\n  if (rule.includes('sql') || rule.includes('injection')) return 'Web Attack';\n  if (rule.includes('scan') || rule.includes('port')) return 'Reconnaissance';\n  if (rule.includes('malware') || rule.includes('virus')) return 'Malware';\n  return 'General Security';\n}\n\n// Determinar asignación automática\nfunction getAssignment(category, severity) {\n  const assignments = {\n    'Authentication': 'soc_team@example.com',\n    'Web Attack': 'websec_team@example.com',\n    'Reconnaissance': 'monitoring_team@example.com',\n    'Malware': 'malware_team@example.com'\n  };\n  \n  return assignments[category] || 'security_team@example.com';\n}\n\nconst ticketData = {\n  ticket_number: ticketNumber,\n  title: alert.title || `[${alert.severity}] ${alert.rule_name}`,\n  description: alert.description || 'Sin descripción',\n  status: 'open',\n  priority: getPriority(alert.severity, alert.risk_score),\n  category: getCategory(alert.rule_name),\n  source_ip: alert.source_ip,\n  threat_score: alert.risk_score || 0,\n  assigned_to: getAssignment(getCategory(alert.rule_name), alert.severity),\n  created_at: new Date().toISOString(),\n  alert_reference: {\n    rule_name: alert.rule_name,\n    severity: alert.severity,\n    timestamp: alert.timestamp\n  }\n};\n\nreturn [{ json: ticketData }];"
+        "jsCode": "const inputData = $input.first().json;\nconst alert = inputData.body || inputData; \n\nconst ticketNumber = 'TICKET-' + \n  new Date().getFullYear().toString().slice(-2) + \n  ('0' + (new Date().getMonth() + 1)).slice(-2) + \n  ('0' + new Date().getDate()).slice(-2) + \n  '-' + \n  Math.random().toString(36).substr(2, 6).toUpperCase();\n\nfunction getPriority(severity, riskScore) {\n  const sev = String(severity || 'low').toLowerCase();\n  const score = Number(riskScore) || 0;\n  if (sev === 'critical' || score >= 80) return 'high';\n  if (sev === 'high' || score >= 60) return 'medium';\n  return 'low';\n}\n\nfunction getCategory(ruleName) {\n  const rule = String(ruleName || '').toLowerCase();\n  if (rule.includes('ssh') || rule.includes('login') || rule.includes('auth')) return 'Authentication';\n  if (rule.includes('sql') || rule.includes('injection')) return 'Web Attack';\n  if (rule.includes('scan') || rule.includes('port')) return 'Reconnaissance';\n  if (rule.includes('malware') || rule.includes('virus')) return 'Malware';\n  return 'General Security';\n}\n\nconst cat = getCategory(alert.rule_name);\n\nconst ticketData = {\n  ticket_number: ticketNumber,\n  title: `[${String(alert.severity || 'INFO').toUpperCase()}] ${alert.rule_name || 'Alerta de Seguridad'}`,\n  description: alert.description || `Detección automática en IP: ${alert.source_ip || 'Desconocida'}`,\n  status: 'open',\n  priority: getPriority(alert.severity, alert.risk_score),\n  category: cat,\n  source_ip: alert.source_ip || '0.0.0.0',\n  threat_score: alert.risk_score || 0,\n  assigned_to: 'security_team@example.com',\n  created_at: new Date().toISOString(),\n  // NUEVO: Guardamos el objeto original completo como referencia\n  alert_reference: JSON.stringify(alert) \n};\n\nreturn [{ json: ticketData }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -400,
-        112
+        -496,
+        80
       ],
-      "id": "77274888-9e1d-422e-a234-5d56fb9c4095",
+      "id": "b05a66dc-4d50-452d-83b2-4a0761611caa",
       "name": "Generar Ticket"
     },
     {
@@ -58,56 +56,41 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        -208,
-        112
+        -304,
+        80
       ],
-      "id": "30e6c7e7-a7e8-4ece-9d1e-3e79b90138c6",
+      "id": "7f8bdf66-15de-4a6f-8b71-1877fe509a4b",
       "name": "Insertar Ticket en BD",
       "credentials": {
         "postgres": {
-          "id": "xQDinEhC3bDgBeQn",
+          "id": "5oNla0FyawiUWphG",
           "name": "Postgres account"
         }
       }
     },
     {
       "parameters": {
-        "resource": "message"
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#nuevo-canal",
+          "mode": "name"
+        },
+        "text": "={{ `Nuevo ticket: *${$json.ticket_number}* - ${$json.title}\\n` +\n`Prioridad: ${$json.priority} | Categoría: ${$json.category}\\n` +\n`IP: ${$json.source_ip} | Score: ${$json.threat_score}\\n` +\n`Asignado: ${$json.assigned_to}` }}",
+        "otherOptions": {}
       },
-      "type": "n8n-nodes-base.emailSend",
-      "typeVersion": 2,
-      "position": [
-        0,
-        0
-      ],
-      "id": "6c66f7f3-410d-408f-b288-5b0006bad91c",
-      "name": "Notificar por Email",
-      "webhookId": "422edc37-9a13-4d09-af98-84a6ef19c45b",
-      "credentials": {
-        "smtp": {
-          "id": "znhf5WG1LFCJW8kK",
-          "name": "SMTP account"
-        }
-      }
-    },
-    {
-      "parameters": {
-      "select": "channel",
-      "channel": {
-        "mode": "equipobot-rojo",
-        "value": "security-alerts"
-      },
-      "text": "={{ `Nuevo ticket: *${$json.ticket_number}* - ${$json.title}\\n` +\n`Prioridad: ${$json.priority} | Categoría: ${$json.category}\\n` +\n`IP: ${$json.source_ip} | Score: ${$json.threat_score}\\n` +\n`Asignado: ${$json.assigned_to}` }}",
-      "otherOptions": {}
-    },
       "type": "n8n-nodes-base.slack",
       "typeVersion": 2,
-      "position": [0, 208],
-      "id": "26ba07f3-1765-4920-b8bd-d02d8a292b83",
+      "position": [
+        -96,
+        176
+      ],
+      "id": "98c59543-bbd1-4d2a-80be-fbbff152abcd",
       "name": "Notificar en Slack",
+      "webhookId": "51d64ca6-4c2d-4070-b54a-290e312e31c9",
       "credentials": {
         "slackApi": {
-          "id": "dgEXu72QNPkfGQdY",
+          "id": "gUEgU3Z0dFrsEYob",
           "name": "Slack account"
         }
       }
@@ -119,11 +102,36 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        208,
-        112
+        112,
+        80
       ],
-      "id": "880131f8-c312-4b9c-bd89-cf5dea755b3c",
+      "id": "e502fbd5-d093-4f90-ab97-98ad16b201e4",
       "name": "Finalizar Proceso"
+    },
+    {
+      "parameters": {
+        "fromEmail": "rafa.legendsss@gmail.com",
+        "toEmail": "rafa.legendsss@gmail.com",
+        "subject": "Generar alertas",
+        "emailFormat": "text",
+        "text": "=Alerta de Seguridad - Nuevo Ticket Detectado ID: {{ $json.id }} IP Maliciosa: {{ $json.source_ip }} Riesgo: {{ $json.risk_score }} Categoría: {{ $json.category }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        -128,
+        0
+      ],
+      "id": "8618e42e-a5e0-4160-88d2-87aaa4146f02",
+      "name": "Send email",
+      "webhookId": "6b0a7bc7-0e9d-4669-ab6f-da7b843ae9ec",
+      "credentials": {
+        "smtp": {
+          "id": "adlWUgRnoj7ZoL1U",
+          "name": "SMTP account"
+        }
+      }
     }
   ],
   "pinData": {},
@@ -154,23 +162,12 @@
       "main": [
         [
           {
-            "node": "Notificar por Email",
+            "node": "Notificar en Slack",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Notificar en Slack", 
-            "type": "main",
-            "index": 1
-          }
-        ]
-      ]
-    },
-    "Notificar por Email": {
-      "main": [
-        [
-          {
-            "node": "Finalizar Proceso",
+            "node": "Send email",
             "type": "main",
             "index": 0
           }
@@ -187,17 +184,28 @@
           }
         ]
       ]
+    },
+    "Send email": {
+      "main": [
+        [
+          {
+            "node": "Finalizar Proceso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "355b688b-9c6b-4e3f-b550-642bfb6a2ef4",
+  "versionId": "2d6fc127-e832-4032-8f98-3e68918ef54e",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "62a476d001d9b5667943139795e50ef1df67c5e4cc02e91414150a16123dcae4"
+    "instanceId": "e9af1fd68f298f1d66e435af1bc92250ca76158be14ebd2d8c8195129d45218f"
   },
-  "id": "U0rZEiCVbY3IWE1x",
+  "id": "j6Qn64ARNQ2dKSwQ",
   "tags": []
 }

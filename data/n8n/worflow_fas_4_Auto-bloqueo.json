@@ -3,20 +3,17 @@
   "nodes": [
     {
       "parameters": {
+        "httpMethod": "POST",
         "path": "/webhook/auto-block",
-        "responseMode": "onReceived",
-        "options": {
-          "Response Data": "Last Node",
-          "No Response Body": "Desactivado"
-        }
+        "options": {}
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1.1,
       "position": [
-        896,
-        -272
+        -592,
+        144
       ],
-      "id": "27a92031-11fb-4986-889a-eb00bf4a14cd",
+      "id": "dcce36c6-131d-47e4-b349-4945ee18a598",
       "name": "Webhook",
       "webhookId": "auto-block-webhook"
     },
@@ -29,14 +26,14 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        1488,
-        -416
+        0,
+        0
       ],
-      "id": "d9721a0c-8103-4667-988b-57d1b07bf5f6",
+      "id": "e028ceb5-94a3-4dd5-9050-d6fc2d1f2f19",
       "name": "Insertar IP Bloqueada",
       "credentials": {
         "postgres": {
-          "id": "xQDinEhC3bDgBeQn",
+          "id": "5oNla0FyawiUWphG",
           "name": "Postgres account"
         }
       }
@@ -48,10 +45,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1072,
-        -272
+        -416,
+        144
       ],
-      "id": "b9ea36c4-0eb3-40b7-a673-fc734b782317",
+      "id": "16b210b5-1e05-492f-b2bd-d914c5f1b921",
       "name": "Lógica de Decisión"
     },
     {
@@ -61,10 +58,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1696,
-        -416
+        208,
+        0
       ],
-      "id": "2b57f488-adcf-4d1d-bbca-d60772570206",
+      "id": "7e923e2a-d4c4-4f23-8345-bdc18e1bab58",
       "name": "Acción Firewall"
     },
     {
@@ -94,10 +91,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.1,
       "position": [
-        1216,
-        -272
+        -272,
+        144
       ],
-      "id": "b8bbcd3f-54f0-46d4-be80-16cd39476b2d",
+      "id": "def59021-f743-42cf-b150-d91546690247",
       "name": "¿Bloquear?"
     },
     {
@@ -107,10 +104,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1920,
-        -256
+        432,
+        160
       ],
-      "id": "99e1ddbd-2a36-45f1-aadd-a25db867b4e1",
+      "id": "e3d64764-68ff-43b0-82d0-a60cb8978804",
       "name": "Generar Reporte"
     }
   ],
@@ -183,11 +180,11 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "a8db5335-d1fa-4d44-a31a-467e494d4b28",
+  "versionId": "71542206-786c-49b4-9f78-8e247c747809",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "62a476d001d9b5667943139795e50ef1df67c5e4cc02e91414150a16123dcae4"
+    "instanceId": "e9af1fd68f298f1d66e435af1bc92250ca76158be14ebd2d8c8195129d45218f"
   },
-  "id": "xKhS7bDRxlEXbNyE",
+  "id": "clc2L6MJWypmwASu",
   "tags": []
 }

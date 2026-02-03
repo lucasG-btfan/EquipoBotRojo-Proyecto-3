@@ -14,10 +14,10 @@
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
-        -1296,
-        80
+        320,
+        128
       ],
-      "id": "9cbd04a0-60c7-417f-8584-e1857509a9d3",
+      "id": "9181d53c-af6a-4636-ae56-3756b0253c34",
       "name": "Schedule Trigger"
     },
     {
@@ -27,10 +27,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1248,
-        -144
+        368,
+        -112
       ],
-      "id": "55e9c9fb-3bdd-462f-88c3-2358582c81d1",
+      "id": "bb614c95-358b-4236-97b7-55bd9866caf2",
       "name": "nodo 2"
     },
     {
@@ -40,10 +40,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        560,
-        144
+        2464,
+        512
       ],
-      "id": "0ef7824e-3be0-42bb-9f59-03d472b2b023",
+      "id": "42f7a887-fe03-4765-92f8-a9ab45d2f9c1",
       "name": "HTTP Request"
     },
     {
@@ -103,10 +103,10 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.3,
       "position": [
-        176,
-        80
+        1792,
+        128
       ],
-      "id": "5a4a649b-e939-4269-843a-a44a5cbc9bbe",
+      "id": "816a4ffc-7aa7-48aa-b9d8-5b556e00ce2e",
       "name": "Switch"
     },
     {
@@ -116,30 +116,30 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -256,
-        80
+        1360,
+        128
       ],
-      "id": "95fd8422-e6b9-40a2-adc0-f3fbe9279b43",
+      "id": "33913e11-417f-4d59-bce5-eb115b3d569b",
       "name": "nodo 4: detectar leyes"
     },
     {
       "parameters": {
-        "channel": "security-alerts",
-        "text": "={{ $json.text }}",
+        "channel": "#nuevo-canal",
+        "text": "=Nuevo ticket: {{ $json.id }} - {{ $json.category }}\nPrioridad: {{ $json.severity }} | Categoría: {{ $json.category }}\nIP: {{ $json.source_ip }} | Score: {{ $json.risk_score }}\nAsignado: {{ $json.assigned_to || 'Sin asignar' }}",
         "otherOptions": {},
         "attachments": []
       },
-      "id": "3ba03eb0-9825-40a9-a23e-691ef4a7094c",
+      "id": "a7fe3916-fe1a-40b7-ae3f-ff709fc92bcb",
       "name": "Send Slack Message",
       "type": "n8n-nodes-base.slack",
       "typeVersion": 1,
       "position": [
-        672,
-        -48
+        2336,
+        -16
       ],
       "credentials": {
         "slackApi": {
-          "id": "dgEXu72QNPkfGQdY",
+          "id": "gUEgU3Z0dFrsEYob",
           "name": "Slack account"
         }
       }
@@ -151,10 +151,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        336,
-        336
+        2128,
+        688
       ],
-      "id": "e31027e0-67c2-4f7a-afa6-f672752bc1d7",
+      "id": "a5b9bab0-da1d-4148-8868-95ac1638f4f6",
       "name": "Nodo 8: Log Only (no)"
     },
     {
@@ -164,10 +164,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        864,
-        -48
+        2560,
+        -16
       ],
-      "id": "289e77cb-a608-4c2c-9182-017a3cd3836b",
+      "id": "c506af53-358a-4aba-9171-d18190e655f5",
       "name": "nodo 9: resumen"
     },
     {
@@ -180,10 +180,10 @@
       "type": "n8n-nodes-base.readWriteFile",
       "typeVersion": 1,
       "position": [
-        -1104,
-        80
+        512,
+        128
       ],
-      "id": "2ab577ea-abab-40a4-af6e-4927a35aa0ce",
+      "id": "a393a0e1-cc47-4c50-83dd-c1c4eee33ab2",
       "name": "Read/Write Files from Disk"
     },
     {
@@ -194,10 +194,10 @@
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1,
       "position": [
-        -848,
-        80
+        768,
+        128
       ],
-      "id": "66497aa6-4eab-4dc8-9f62-752886414398",
+      "id": "81f5738c-5db4-4811-aa48-e4fbca09c919",
       "name": "Extract from File"
     },
     {
@@ -207,10 +207,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -560,
-        80
+        1056,
+        128
       ],
-      "id": "1fe12624-ee19-4ebf-ac8b-8a37ea359fb7",
+      "id": "539976a2-4cc7-42ae-a9f1-5fd315366dd8",
       "name": "Code in JavaScript"
     },
     {
@@ -413,15 +413,15 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        464,
-        -48
+        2160,
+        -16
       ],
-      "id": "d4a513ea-3c0b-4c72-a7ec-a71e4e5d6ddc",
+      "id": "9dbc5fde-a204-474f-b494-1f45af9c55d0",
       "name": "Insert rows in a table",
       "retryOnFail": true,
       "credentials": {
         "postgres": {
-          "id": "xQDinEhC3bDgBeQn",
+          "id": "5oNla0FyawiUWphG",
           "name": "Postgres account"
         }
       }
@@ -433,10 +433,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -48,
-        80
+        1568,
+        128
       ],
-      "id": "8bd670ec-8a1a-4248-b7d7-4a8b89d92c0e",
+      "id": "1b65ddf2-90a3-4bf0-92f5-955abc2fa2e3",
       "name": "Enriquecimiento Threat Intel"
     },
     {
@@ -467,10 +467,10 @@
       "type": "n8n-nodes-base.filter",
       "typeVersion": 2.2,
       "position": [
-        304,
-        -32
+        1920,
+        16
       ],
-      "id": "76ab3d54-1e2f-49fd-9724-64e8cf8a8d6a",
+      "id": "c37e45bc-1473-4389-a658-bfd2cb145bbd",
       "name": "Filter"
     },
     {
@@ -501,24 +501,104 @@
       "type": "n8n-nodes-base.filter",
       "typeVersion": 2.2,
       "position": [
-        368,
-        144
+        2176,
+        512
       ],
-      "id": "fb9b086d-c16c-4a9c-921f-e971dbfca084",
+      "id": "0dbf8e8e-170f-4950-9e50-130feb3ad16c",
       "name": "Filter1"
     },
     {
       "parameters": {
-        "jsCode": "// Nodo: Activar Workflows 4 y 5\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const alert = item.json;\n  \n  // Solo activar para alertas de alta severidad con IP válida\n  if ((alert.severity === 'high' || alert.severity === 'critical') && \n      alert.source_ip && \n      alert.source_ip !== '0.0.0.0') {\n    \n    try {\n      // Datos para auto-bloqueo (workflow 4)\n      const blockData = {\n        source_ip: alert.source_ip,\n        threat_score: alert.risk_score || 75,\n        severity: alert.severity,\n        rule_name: alert.rule_name || 'Unknown',\n        timestamp: new Date().toISOString(),\n        reason: `Auto-bloqueo por: ${alert.rule_name || 'Alerta de seguridad'}`\n      };\n      \n      // Datos para tickets (workflow 5)\n      const ticketData = {\n        title: `[${alert.severity.toUpperCase()}] ${alert.rule_name || 'Security Alert'}`,\n        description: alert.description || `Alerta de seguridad desde ${alert.source_ip}`,\n        severity: alert.severity,\n        source_ip: alert.source_ip,\n        category: alert.category || 'general',\n        rule_name: alert.rule_name || 'Unknown',\n        risk_score: alert.risk_score || 75\n      };\n      \n      // Enviar a ambos webhooks (DENTRO del contenedor Docker)\n      const responses = await Promise.allSettled([\n        $http.post({\n          url: 'http://n8n:5678/webhook/auto-block',\n          body: blockData,\n          headers: { 'Content-Type': 'application/json' },\n          timeout: 3000\n        }),\n        $http.post({\n          url: 'http://n8n:5678/webhook/create-ticket',\n          body: ticketData,\n          headers: { 'Content-Type': 'application/json' },\n          timeout: 3000\n        })\n      ]);\n      \n      results.push({\n        json: {\n          ...alert,\n          workflows_triggered: true,\n          block_success: responses[0].status === 'fulfilled',\n          ticket_success: responses[1].status === 'fulfilled',\n          block_response: responses[0].status === 'fulfilled' ? responses[0].value.status : 'error',\n          ticket_response: responses[1].status === 'fulfilled' ? responses[1].value.status : 'error'\n        }\n      });\n      \n    } catch (error) {\n      results.push({\n        json: {\n          ...alert,\n          workflows_triggered: false,\n          error: error.message\n        }\n      });\n    }\n  } else {\n    // Si no cumple criterios, pasar sin cambios\n    results.push({ json: alert });\n  }\n}\n\nreturn results;"
+        "jsCode": "// Nodo: Activar Workflows 4 y 5 const items = $input.all(); const results = []; for (const item of items) { const alert = item.json; // Solo activar para alertas de alta severidad con IP válida if ((alert.severity === 'high' || alert.severity === 'critical') && alert.source_ip && alert.source_ip !== '0.0.0.0') { try { // Datos para auto-bloqueo (workflow 4) const blockData = { source_ip: alert.source_ip, threat_score: alert.risk_score || 75, severity: alert.severity, rule_name: alert.rule_name || 'Unknown', timestamp: new Date().toISOString(), reason: `Auto-bloqueo por: ${alert.rule_name || 'Alerta de seguridad'}` }; // Datos para tickets (workflow 5) const ticketData = { title: `[${alert.severity.toUpperCase()}] ${alert.rule_name || 'Security Alert'}`, description: alert.description || `Alerta de seguridad desde ${alert.source_ip}`, severity: alert.severity, source_ip: alert.source_ip, category: alert.category || 'general', rule_name: alert.rule_name || 'Unknown', risk_score: alert.risk_score || 75 }; // Enviar a ambos webhooks (DENTRO del contenedor Docker) const responses = await Promise.allSettled([ $http.post({ url: 'http://host.docker.internal:5678/webhook/auto-block', body: blockData, headers: { 'Content-Type': 'application/json' }, timeout: 3000 }), $http.post({ url: 'http://host.docker.internal:5678/webhook-test/create-ticket', body: ticketData, headers: { 'Content-Type': 'application/json' }, timeout: 3000 }) ]); results.push({ json: { ...alert, workflows_triggered: true, block_success: responses[0].status === 'fulfilled', ticket_success: responses[1].status === 'fulfilled', block_response: responses[0].status === 'fulfilled' ? responses[0].value.status : 'error', ticket_response: responses[1].status === 'fulfilled' ? responses[1].value.status : 'error' } }); } catch (error) { results.push({ json: { ...alert, workflows_triggered: false, error: error.message } }); } } else { // Si no cumple criterios, pasar sin cambios results.push({ json: alert }); } } return results;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        992,
-        128
+        2752,
+        368
       ],
-      "id": "e01b9732-4e29-44e3-9433-d8b41e72400c",
+      "id": "139f9dae-da06-443b-bb4b-33c5844a2094",
       "name": "Trigger Workflows 4 & 5"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/webhook/create-ticket",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "title",
+              "value": "Alerta de seguridad"
+            },
+            {
+              "name": "rule_name",
+              "value": "={{ $json.rule_name }}"
+            },
+            {
+              "name": "severity",
+              "value": "={{ $json.severity }}"
+            },
+            {
+              "name": "source_ip",
+              "value": "={{ $json.source_ip }}"
+            },
+            {
+              "name": "risk_score",
+              "value": "={{ $json.risk_score }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2224,
+        144
+      ],
+      "id": "efb01892-1735-4e23-b8fd-41f47c6f5cff",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/webhook/auto-block",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "title",
+              "value": "Alerta de seguridad"
+            },
+            {
+              "name": "rule_name",
+              "value": "={{ $json.rule_name }}"
+            },
+            {
+              "name": "severity",
+              "value": "={{ $json.severity }}"
+            },
+            {
+              "name": "source_ip",
+              "value": "={{ $json.source_ip }}"
+            },
+            {
+              "name": "risk_score",
+              "value": "={{ $json.risk_score }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2240,
+        352
+      ],
+      "id": "c0664d99-ef75-4f99-a2dc-9fc4be854458",
+      "name": "HTTP Request2"
     }
   ],
   "pinData": {},
@@ -619,6 +699,16 @@
             "node": "Insert rows in a table",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -658,13 +748,7 @@
     },
     "nodo 9: resumen": {
       "main": [
-        [
-          {
-            "node": "Trigger Workflows 4 & 5",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        []
       ]
     }
   },
@@ -672,11 +756,11 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "f559ad62-c1c7-4b15-8f47-c8df71ca6acb",
+  "versionId": "ca002bc7-c8eb-473d-ab7b-4d4a4de07a6e",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "62a476d001d9b5667943139795e50ef1df67c5e4cc02e91414150a16123dcae4"
+    "instanceId": "e9af1fd68f298f1d66e435af1bc92250ca76158be14ebd2d8c8195129d45218f"
   },
-  "id": "WPTdkWTY1PcCt7cN",
+  "id": "u58gEaHKc0UCbk9h",
   "tags": []
 }
