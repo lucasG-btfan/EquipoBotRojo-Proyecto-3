@@ -170,5 +170,56 @@ Como se llevan los datos a elastic: Activamos el workflow de N8N. Para ver si re
    https://www.youtube.com/watch?v=3IvcIPDGB1k
    https://www.youtube.com/watch?v=llzEpKUxl9E&list=PLMd59HZRUmEjuFxu8hsAvErZkn0_W-A6b (Proporcionado por los profesores)
 
+# EJERCICIO 4: Respuesta Automática y Notificaciones Multi-canal
 
+Descripción:El ejercicio 4 implementa un sistema completo de respuesta automática a incidentes de seguridad. Cuando se detecta una amenaza, el sistema no solo genera alertas, sino que toma acciones inmediatas: bloquea IPs maliciosas, crea tickets automáticos y notifica a los equipos especializados por múltiples canales (email, Slack, base de datos).
 
+## Componentes Clave
+
+Auto-bloqueo de IPs:
+
+Webhook: Recibe alertas en tiempo real.
+Lógica: Bloquea IPs si threat_score ≥ 80 (30 días) o ≥ 60 (24 horas).
+Base de datos: Registra IPs bloqueadas en la tabla blocked_ips.
+
+## Sistema de Tickets:
+
+Asignación: Dirige tickets a equipos según el tipo de amenaza (ej: SSH → SOC Team).
+Notificaciones: Envía alertas por email y Slack.
+
+## Integración con ELK:
+
+Registra acciones en Logstash para auditoría y visualización en Kibana.
+
+## Pruebas y Comandos
+
+Auto-bloqueo:
+bash
+Copiar
+
+curl -X POST http://localhost:5678/webhook/auto-block -H "Content-Type: application/json" -d '{"source_ip": "192.168.1.100", "threat_score": 85, "severity": "high"}'
+
+Tickets:
+bash
+Copiar
+
+curl -X POST http://localhost:5678/webhook/create-ticket -H "Content-Type: application/json" -d '{"source_ip": "10.0.0.50", "risk_score": 75, "title": "SQL Injection"}'
+
+Verificación en PostgreSQL:
+bash
+Copiar
+
+docker exec security-postgres psql -U db_user -d security_monitoring -c "SELECT * FROM blocked_ips;"
+docker exec security-postgres psql -U db_user -d security_monitoring -c "SELECT * FROM security_tickets;"
+
+## Resultados Esperados
+
+Tiempo de respuesta: < 5 segundos.
+Canales de notificación: Email, Slack, PostgreSQL.
+Impacto: Automatiza el 80% de tareas repetitivas y mejora la trazabilidad.
+
+Fuentes de Información
+
+Trabajar con Slack:
+-https://www.youtube.com/watch?v=md6KZo_-bfw&t=44s
+-https://www.youtube.com/watch?v=md6KZo_-bfw&t=44s
