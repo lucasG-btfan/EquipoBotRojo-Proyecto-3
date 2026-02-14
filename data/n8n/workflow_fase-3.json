@@ -22,19 +22,6 @@
     },
     {
       "parameters": {
-        "jsCode": "const fiveMinutesAgo = new Date(Date.now() - (5 * 60 * 1000));\n\nconst simulatedLogs = [];\n\nconst logTypes = [\n  {\n    type: 'ssh_failed',\n    pattern: 'Failed password for',\n    count: Math.floor(Math.random() * 8) + 1, // 1-8 intentos\n    template: (i) => `${new Date(Date.now() - i * 30000).toISOString()} server1 sshd[${1234 + i}]: Failed password for invalid user attacker${i} from 192.168.1.${100 + i} port 22`\n  },\n  {\n    type: 'sudo_usage', \n    pattern: 'sudo: session opened',\n    count: Math.floor(Math.random() * 3) + 1,\n    template: (i) => `${new Date(Date.now() - i * 60000).toISOString()} server1 sudo: pam_unix(sudo:session): session opened for user root by admin`\n  },\n  {\n    type: 'iptables_drop',\n    pattern: 'iptables.*DROP',\n    count: Math.floor(Math.random() * 5) + 1,\n    template: (i) => `${new Date(Date.now() - i * 45000).toISOString()} firewall kernel: iptables: DROP IN=eth0 SRC=10.0.0.${i} DST=192.168.1.10 DPT=22`\n  },\n  {\n    type: 'sql_injection',\n    pattern: 'union.*select',\n    count: Math.random() > 0.7 ? 1 : 0,\n    template: () => `${new Date().toISOString()} web-server apache2: 192.168.1.50 - - [10/Dec/2024:14:30:25 +0000] \"GET /index.php?id=1' UNION SELECT NULL-- HTTP/1.1\" 200 512`\n  }\n];\n\n// Generar logs\nlogTypes.forEach(logType => {\n  for (let i = 0; i < logType.count; i++) {\n    const logTime = new Date(Date.now() - i * 30000);\n    if (logTime >= fiveMinutesAgo) {\n      simulatedLogs.push({\n        timestamp: logTime.toISOString(),\n        raw: logType.template(i),\n        file: logType.type === 'ssh_failed' ? 'failed_ssh.log' : 'alerts.log',\n        source: 'simulated'\n      });\n    }\n  }\n});\n\nif (simulatedLogs.length === 0) {\n  simulatedLogs.push({\n    timestamp: new Date().toISOString(),\n    raw: `${new Date().toISOString()} system: No security events in last 5 minutes`,\n    file: 'system.log',\n    source: 'test'\n  });\n}\n\nconsole.log(`Generated ${simulatedLogs.length} simulated logs for testing`);\nreturn simulatedLogs.map(log => ({ json: log }));"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        368,
-        -112
-      ],
-      "id": "bb614c95-358b-4236-97b7-55bd9866caf2",
-      "name": "nodo 2"
-    },
-    {
-      "parameters": {
         "jsCode": "const items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const alert = item.json;\n  \n  const logData = {\n    // Campos OBLIGATORIOS\n    \"source\": \"n8n\",\n    \"severity\": alert.severity || \"medium\",\n    \"rule_name\": alert.rule_name || \"Unknown\",\n    \"description\": alert.description || \"No description\",\n    \"source_ip\": alert.source_ip || \"0.0.0.0\",\n    \"timestamp\": new Date().toISOString(),\n    \n    // Campos adicionales\n    \"category\": alert.category || \"general\",\n    \"event_count\": alert.event_count || 1,\n    \n    // Para filtro Logstash\n    \"data_source\": \"n8n_workflow\"\n  };\n  \n  try {\n    const response = await $http.post({\n      url: 'http://logstash:8080',\n      body: logData,\n      headers: {\n        'Content-Type': 'application/json'\n      }\n    });\n    \n    results.push({\n      json: {\n        ...alert,\n        logstash_sent: true,\n        response: response\n      }\n    });\n    \n  } catch (error) {\n    results.push({\n      json: {\n        ...alert,\n        logstash_sent: false,\n        error: error.message\n      }\n    });\n  }\n}\n\nreturn results;"
       },
       "type": "n8n-nodes-base.code",
@@ -111,7 +98,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const logs = $input.all();\n\n// 1. Definimos las reglas aquí directamente para evitar el error del módulo 'pg'\nconst rules = [\n  { id: 1, name: 'SSH Brute Force', pattern: 'Failed password', severity: 'high', threshold: 1, description: 'Fallo de login SSH' },\n  { id: 2, name: 'Port Scan', pattern: 'DPT=', severity: 'medium', threshold: 3, description: 'Escaneo de puertos detectado' },\n  { id: 3, name: 'Root Login Attempt', pattern: 'Failed password for root', severity: 'critical', threshold: 1, description: '¡Intento crítico de acceso como ROOT!' },\n  { id: 4, name: 'Kernel Oops', pattern: 'Oops', severity: 'critical', threshold: 1, description: 'Error crítico del sistema (Kernel)' },\n  { id: 5, name: 'Access Denied', pattern: 'Access denied', severity: 'high', threshold: 1, description: 'Acceso denegado a recurso' },\n  { id: 6, name: 'Service Restart', pattern: 'Started', severity: 'info', threshold: 1, description: 'Servicio reiniciado' }\n];\n\nconst extractIP = (text) => {\n  const ipRegex = /\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b/;\n  const match = text.match(ipRegex);\n  return match ? match[0] : '127.0.0.1'; \n};\n// 2. Agrupamos los logs por IP\nconst logGroups = {};\nlogs.forEach(item => {\n  const log = item.json;\n  const ip = (log.source_ip && log.source_ip !== 'unknown') ? log.source_ip : extractIP(log.raw || '');\n  const key = `${log.type || 'auth'}_${ip}`;\n  if (!logGroups[key]) logGroups[key] = [];\n  logGroups[key].push({...log, source_ip: ip});\n});\n\nconst alerts = [];\n\n// 3. Procesamos las reglas\nfor (const rule of rules) {\n  for (const [key, logGroup] of Object.entries(logGroups)) {\n    const matchingLogs = logGroup.filter(log => {\n      try {\n        const regex = new RegExp(rule.pattern, 'i');\n        return regex.test(log.raw);\n      } catch (e) { return false; }\n    });\n    \n    if (matchingLogs.length >= rule.threshold) {\n      alerts.push({\n        rule_id: rule.id,\n        rule_name: rule.name,\n        severity: rule.severity,\n        category: 'authentication_failure',\n        source_ip: matchingLogs[0].source_ip,\n        target_host: 'server1',\n        event_count: matchingLogs.length,\n        description: `${rule.description} desde ${matchingLogs[0].source_ip}`,\n        raw_log: matchingLogs[0].raw,\n        timestamp: new Date().toISOString()\n      });\n    }\n  }\n}\n\n// 4. Si no hay alertas, enviamos un estado de monitoreo\nif (alerts.length === 0) {\n  return [{\n    json: {\n      rule_name: 'Monitoring Active',\n      severity: 'info',\n      category: 'system',\n      description: 'No threats detected in logs',\n      source_ip: '0.0.0.0'\n    }\n  }];\n}\n\nreturn alerts.map(alert => ({ json: alert }));"
+        "jsCode": "const logs = $input.all();\nconst rules = [\n  { id: 1, name: 'SSH Brute Force', pattern: 'Failed password', severity: 'high', threshold: 1, description: 'Fallo de login SSH' },\n  { id: 2, name: 'Port Scan', pattern: 'DPT=', severity: 'medium', threshold: 3, description: 'Escaneo de puertos detectado' },\n  { id: 3, name: 'Root Login Attempt', pattern: 'Failed password for root', severity: 'critical', threshold: 1, description: '¡Intento crítico de acceso como ROOT!' },\n  { id: 4, name: 'Kernel Oops', pattern: 'Oops', severity: 'critical', threshold: 1, description: 'Error crítico del sistema (Kernel)' },\n  { id: 5, name: 'Access Denied', pattern: 'Access denied', severity: 'high', threshold: 1, description: 'Acceso denegado a recurso' },\n  { id: 6, name: 'Service Restart', pattern: 'Started', severity: 'info', threshold: 1, description: 'Servicio reiniciado' }\n];\n\nconst extractIP = (text) => {\n  const ipRegex = /\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b/;\n  const match = text.match(ipRegex);\n  return match ? match[0] : '127.0.0.1'; \n};\nconst logGroups = {};\nlogs.forEach(item => {\n  const log = item.json;\n  const ip = (log.source_ip && log.source_ip !== 'unknown') ? log.source_ip : extractIP(log.raw || '');\n  const key = `${log.type || 'auth'}_${ip}`;\n  if (!logGroups[key]) logGroups[key] = [];\n  logGroups[key].push({...log, source_ip: ip});\n});\n\nconst alerts = [];\n\nfor (const rule of rules) {\n  for (const [key, logGroup] of Object.entries(logGroups)) {\n    const matchingLogs = logGroup.filter(log => {\n      try {\n        const regex = new RegExp(rule.pattern, 'i');\n        return regex.test(log.raw);\n      } catch (e) { return false; }\n    });\n    \n    if (matchingLogs.length >= rule.threshold) {\n      alerts.push({\n        rule_id: rule.id,\n        rule_name: rule.name,\n        severity: rule.severity,\n        category: 'authentication_failure',\n        source_ip: matchingLogs[0].source_ip,\n        target_host: 'server1',\n        event_count: matchingLogs.length,\n        description: `${rule.description} desde ${matchingLogs[0].source_ip}`,\n        raw_log: matchingLogs[0].raw,\n        timestamp: new Date().toISOString()\n      });\n    }\n  }\n}\n\nif (alerts.length === 0) {\n  return [{\n    json: {\n      rule_name: 'Monitoring Active',\n      severity: 'info',\n      category: 'system',\n      description: 'No threats detected in logs',\n      source_ip: '0.0.0.0'\n    }\n  }];\n}\n\nreturn alerts.map(alert => ({ json: alert }));"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -159,7 +146,7 @@
     },
     {
       "parameters": {
-        "jsCode": "\nconst notifications = $input.all();\n\nconsole.log(`Workflow completed. Sent ${notifications.length} alerts`);\n\nconst summary = {\n  timestamp: new Date().toISOString(),\n  workflow: 'security_monitoring',\n  status: 'completed',\n  alerts_processed: notifications.length,\n  notifications_sent: notifications.length,\n  next_run: new Date(Date.now() + 5 * 60000).toISOString() \n};\n\nconsole.log('Summary:', JSON.stringify(summary, null, 2));\n\nreturn [{\n  json: summary\n}];"
+        "jsCode": "const notifications = $input.all();\n\nconsole.log(`Workflow completed. Sent ${notifications.length} alerts`);\n\nconst summary = {\n  timestamp: new Date().toISOString(),\n  workflow: 'security_monitoring',\n  status: 'completed',\n  alerts_processed: notifications.length,\n  notifications_sent: notifications.length,\n  next_run: new Date(Date.now() + 5 * 60000).toISOString() \n};\n\nconsole.log('Summary:', JSON.stringify(summary, null, 2));\n\nreturn [{\n  json: summary\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -172,7 +159,7 @@
     },
     {
       "parameters": {
-        "fileSelector": "/home/node/logs/auth.log",
+        "fileSelector": "/home/node/logs/security/alerts.log",
         "options": {
           "dataPropertyName": "data"
         }
@@ -202,7 +189,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Este código busca el texto venga del campo que venga\nconst items = $input.all();\n\n// Intentamos obtener el texto de 'data' o de 'text'\nconst rawText = items[0].json.data || items[0].json.text || \"\";\n\nif (!rawText) {\n  throw new Error(\"No se encontró texto en el nodo anterior. Revisa el nodo Extract from File.\");\n}\n\n// Separamos por líneas y creamos el formato que espera el Nodo 3\nconst lines = rawText.split('\\n').filter(line => line.trim() !== '');\n\nreturn lines.map(line => {\n  return {\n    json: {\n      timestamp: new Date().toISOString(),\n      raw: line,\n      file: 'auth.log',\n      source: 'real_file'\n    }\n  };\n});"
+        "jsCode": "const items = $input.all();\nconst rawText = items[0].json.data || items[0].json.text || \"\";\n\nif (!rawText) {\n  throw new Error(\"No se encontró texto en el nodo anterior. Revisa el nodo Extract from File.\");\n}\n\nconst lines = rawText.split('\\n').filter(line => line.trim() !== '');\n\nreturn lines.map(line => {\n  return {\n    json: {\n      timestamp: new Date().toISOString(),\n      raw: line,\n      file: 'auth.log',\n      source: 'real_file'\n    }\n  };\n});"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -428,7 +415,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\n\n// 1. Verificar si es IP privada\nconst ip = items[0].json.source_ip || '0.0.0.0';\nconst isPrivateIP = ip.startsWith('10.') || \n                   ip.startsWith('192.168.') || \n                   (ip.startsWith('172.') && parseInt(ip.split('.')[1]) >= 16 && parseInt(ip.split('.')[1]) <= 31);\n\n// 2. Base de datos SIMULADA de threat intelligence\nconst threatDB = {\n  '192.168.1.50': { \n    reputation: 'malicious', \n    tags: ['sql_injection', 'web_attack'],\n    confidence: 0.85\n  },\n  '10.0.0.10': { \n    reputation: 'suspicious', \n    tags: ['port_scan'],\n    confidence: 0.65\n  }\n};\n\n// 3. Aplicar enriquecimiento\nitems[0].json.threat_intel = {\n  is_private_ip: isPrivateIP,\n  threat_info: threatDB[ip] || { \n    reputation: 'unknown', \n    tags: [], \n    confidence: 0 \n  },\n  geo_info: {\n    country: isPrivateIP ? 'INTERNAL' : 'UNKNOWN',\n    asn: 'N/A'\n  },\n  enrichment_timestamp: new Date().toISOString()\n};\n\n// 4. Calcular risk_score mejorado\nlet riskScore = 0;\n\n// Base por severity\nswitch(items[0].json.severity) {\n  case 'critical': riskScore = 90; break;\n  case 'high': riskScore = 70; break;\n  case 'medium': riskScore = 50; break;\n  default: riskScore = 30;\n}\n\n// Bonificación por threat intelligence\nif (items[0].json.threat_intel.threat_info.reputation === 'malicious') {\n  riskScore += 20;\n} else if (items[0].json.threat_intel.threat_info.reputation === 'suspicious') {\n  riskScore += 10;\n}\n\n// Bonificación por múltiples eventos\nif (items[0].json.event_count && items[0].json.event_count > 3) {\n  riskScore += 15;\n}\n\nitems[0].json.risk_score = Math.min(100, riskScore);\nitems[0].json.risk_level = riskScore >= 80 ? 'CRITICAL' : \n                          riskScore >= 60 ? 'HIGH' : \n                          riskScore >= 40 ? 'MEDIUM' : 'LOW';\n\nreturn items;"
+        "jsCode": "const items = $input.all();\n\nconst ip = items[0].json.source_ip || '0.0.0.0';\nconst isPrivateIP = ip.startsWith('10.') || \n                   ip.startsWith('192.168.') || \n                   (ip.startsWith('172.') && parseInt(ip.split('.')[1]) >= 16 && parseInt(ip.split('.')[1]) <= 31);\n\nconst threatDB = {\n  '192.168.1.50': { \n    reputation: 'malicious', \n    tags: ['sql_injection', 'web_attack'],\n    confidence: 0.85\n  },\n  '10.0.0.10': { \n    reputation: 'suspicious', \n    tags: ['port_scan'],\n    confidence: 0.65\n  }\n};\n\nitems[0].json.threat_intel = {\n  is_private_ip: isPrivateIP,\n  threat_info: threatDB[ip] || { \n    reputation: 'unknown', \n    tags: [], \n    confidence: 0 \n  },\n  geo_info: {\n    country: isPrivateIP ? 'INTERNAL' : 'UNKNOWN',\n    asn: 'N/A'\n  },\n  enrichment_timestamp: new Date().toISOString()\n};\n\nlet riskScore = 0;\n\nswitch(items[0].json.severity) {\n  case 'critical': riskScore = 90; break;\n  case 'high': riskScore = 70; break;\n  case 'medium': riskScore = 50; break;\n  default: riskScore = 30;\n}\n\nif (items[0].json.threat_intel.threat_info.reputation === 'malicious') {\n  riskScore += 20;\n} else if (items[0].json.threat_intel.threat_info.reputation === 'suspicious') {\n  riskScore += 10;\n}\n\nif (items[0].json.event_count && items[0].json.event_count > 3) {\n  riskScore += 15;\n}\n\nitems[0].json.risk_score = Math.min(100, riskScore);\nitems[0].json.risk_level = riskScore >= 80 ? 'CRITICAL' : \n                          riskScore >= 60 ? 'HIGH' : \n                          riskScore >= 40 ? 'MEDIUM' : 'LOW';\n\nreturn items;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -506,19 +493,6 @@
       ],
       "id": "0dbf8e8e-170f-4950-9e50-130feb3ad16c",
       "name": "Filter1"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Nodo: Activar Workflows 4 y 5 const items = $input.all(); const results = []; for (const item of items) { const alert = item.json; // Solo activar para alertas de alta severidad con IP válida if ((alert.severity === 'high' || alert.severity === 'critical') && alert.source_ip && alert.source_ip !== '0.0.0.0') { try { // Datos para auto-bloqueo (workflow 4) const blockData = { source_ip: alert.source_ip, threat_score: alert.risk_score || 75, severity: alert.severity, rule_name: alert.rule_name || 'Unknown', timestamp: new Date().toISOString(), reason: `Auto-bloqueo por: ${alert.rule_name || 'Alerta de seguridad'}` }; // Datos para tickets (workflow 5) const ticketData = { title: `[${alert.severity.toUpperCase()}] ${alert.rule_name || 'Security Alert'}`, description: alert.description || `Alerta de seguridad desde ${alert.source_ip}`, severity: alert.severity, source_ip: alert.source_ip, category: alert.category || 'general', rule_name: alert.rule_name || 'Unknown', risk_score: alert.risk_score || 75 }; // Enviar a ambos webhooks (DENTRO del contenedor Docker) const responses = await Promise.allSettled([ $http.post({ url: 'http://host.docker.internal:5678/webhook/auto-block', body: blockData, headers: { 'Content-Type': 'application/json' }, timeout: 3000 }), $http.post({ url: 'http://host.docker.internal:5678/webhook-test/create-ticket', body: ticketData, headers: { 'Content-Type': 'application/json' }, timeout: 3000 }) ]); results.push({ json: { ...alert, workflows_triggered: true, block_success: responses[0].status === 'fulfilled', ticket_success: responses[1].status === 'fulfilled', block_response: responses[0].status === 'fulfilled' ? responses[0].value.status : 'error', ticket_response: responses[1].status === 'fulfilled' ? responses[1].value.status : 'error' } }); } catch (error) { results.push({ json: { ...alert, workflows_triggered: false, error: error.message } }); } } else { // Si no cumple criterios, pasar sin cambios results.push({ json: alert }); } } return results;"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        2752,
-        368
-      ],
-      "id": "139f9dae-da06-443b-bb4b-33c5844a2094",
-      "name": "Trigger Workflows 4 & 5"
     },
     {
       "parameters": {
@@ -756,10 +730,10 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "ca002bc7-c8eb-473d-ab7b-4d4a4de07a6e",
+  "versionId": "81763a11-a7f9-45f7-88fb-0d0b3332d116",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "e9af1fd68f298f1d66e435af1bc92250ca76158be14ebd2d8c8195129d45218f"
+    "instanceId": "373d65bcd554908cb93e6ff1a278e4a882befe12d092bb2bf361c4c37b9d7da0"
   },
   "id": "u58gEaHKc0UCbk9h",
   "tags": []
