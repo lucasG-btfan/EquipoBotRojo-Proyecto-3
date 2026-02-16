@@ -1,0 +1,12 @@
+[DEFAULT]
+# Esto seria para que fail2ban no nos bloquee al hacer pruebas (importantisimo)
+ignoreip = 127.0.0.1/8 ::1 192.168.1.0/24 
+
+[n8n-auth-jail]
+enabled = true
+port = 5678,22,80,443
+filter = n8n-alert-filter
+# ruta en la que fail2ban lee
+logpath = /var/log/security/alerts.log 
+maxretry = 1
+bantime = 3600

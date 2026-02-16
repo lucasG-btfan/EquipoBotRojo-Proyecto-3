@@ -111,28 +111,6 @@
     },
     {
       "parameters": {
-        "channel": "#nuevo-canal",
-        "text": "=Nuevo ticket: {{ $json.id }} - {{ $json.category }}\nPrioridad: {{ $json.severity }} | Categoría: {{ $json.category }}\nIP: {{ $json.source_ip }} | Score: {{ $json.risk_score }}\nAsignado: {{ $json.assigned_to || 'Sin asignar' }}",
-        "otherOptions": {},
-        "attachments": []
-      },
-      "id": "a7fe3916-fe1a-40b7-ae3f-ff709fc92bcb",
-      "name": "Send Slack Message",
-      "type": "n8n-nodes-base.slack",
-      "typeVersion": 1,
-      "position": [
-        2336,
-        -16
-      ],
-      "credentials": {
-        "slackApi": {
-          "id": "gUEgU3Z0dFrsEYob",
-          "name": "Slack account"
-        }
-      }
-    },
-    {
-      "parameters": {
         "jsCode": "const items = $input.all();\n\nconsole.log(`No significant alerts (${items.length} info/low severity items)`);\n\nitems.forEach(item => {\n  const alert = item.json;\n  console.log(`Info alert: ${alert.rule_name || 'Unknown'} - ${alert.description || 'No description'}`);\n});\n\nreturn [{\n  json: {\n    action: 'logged_only',\n    message: `No action required for ${items.length} low-severity alerts`,\n    timestamp: new Date().toISOString(),\n    alerts_processed: items.length,\n    details: items.map(item => item.json.rule_name || 'Unknown')\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
@@ -497,46 +475,6 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://localhost:5678/webhook/webhook/create-ticket",
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "title",
-              "value": "Alerta de seguridad"
-            },
-            {
-              "name": "rule_name",
-              "value": "={{ $json.rule_name }}"
-            },
-            {
-              "name": "severity",
-              "value": "={{ $json.severity }}"
-            },
-            {
-              "name": "source_ip",
-              "value": "={{ $json.source_ip }}"
-            },
-            {
-              "name": "risk_score",
-              "value": "={{ $json.risk_score }}"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        2224,
-        144
-      ],
-      "id": "efb01892-1735-4e23-b8fd-41f47c6f5cff",
-      "name": "HTTP Request1"
-    },
-    {
-      "parameters": {
-        "method": "POST",
         "url": "http://localhost:5678/webhook/webhook/auto-block",
         "sendBody": true,
         "bodyParameters": {
@@ -573,6 +511,24 @@
       ],
       "id": "c0664d99-ef75-4f99-a2dc-9fc4be854458",
       "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/create-ticket",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"rule_name\": \"{{ $json.rule_name }}\",\n  \"source_ip\": \"{{ $json.source_ip }}\",\n  \"risk_score\": {{ $json.risk_score }},\n  \"description\": \"{{ $json.description }}\",\n  \"threat_intel\": {{ JSON.stringify($json.threat_intel) }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2256,
+        208
+      ],
+      "id": "85aebd49-50f7-44a4-8c0f-4b15b5c3aeb7",
+      "name": "HTTP Request1"
     }
   ],
   "pinData": {},
@@ -675,12 +631,12 @@
             "index": 0
           },
           {
-            "node": "HTTP Request1",
+            "node": "HTTP Request2",
             "type": "main",
             "index": 0
           },
           {
-            "node": "HTTP Request2",
+            "node": "HTTP Request1",
             "type": "main",
             "index": 0
           }
@@ -702,17 +658,6 @@
       "main": [
         [
           {
-            "node": "Send Slack Message",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Send Slack Message": {
-      "main": [
-        [
-          {
             "node": "nodo 9: resumen",
             "type": "main",
             "index": 0
@@ -730,10 +675,10 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "81763a11-a7f9-45f7-88fb-0d0b3332d116",
+  "versionId": "8c614a02-bde2-46a2-9b62-43fe638f8e94",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "a1fd4d034e4eac24a6f649d98a597f7cee9e24e6d68c40d66d66e249020ea36b"
+    "instanceId": "8c36b1fcd5715c1d5c4dc72cf4a61bd3613a8fd6b8532a31460a88ccdd2cd369"
   },
   "id": "u58gEaHKc0UCbk9h",
   "tags": []

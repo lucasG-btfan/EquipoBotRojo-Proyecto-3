@@ -1,0 +1,502 @@
+{
+  "name": "Sistema de Tickets Automático",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "create-ticket",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [
+        -704,
+        80
+      ],
+      "id": "85188dfd-35c8-45e5-8ef6-86043a65fa62",
+      "name": "Webhook Tickets",
+      "webhookId": "ticket-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json.datos_originales || $input.first().json;\n\n// 1. Extraer la IP atacante\nconst sourceIp = input.source_ip || \"0.0.0.0\";\n\n// 2. Sincronizar Prioridad con el Score (70 = HIGH)\nconst score = input.risk_score || 0;\nconst finalPriority = score >= 80 ? 'critical' : score >= 60 ? 'high' : 'medium';\n\nreturn [{\n    json: {\n        ticket_number: 'TICKET-LOG-' + Math.random().toString(36).substr(2, 6).toUpperCase(),\n        title: `[DETECCIÓN] ${input.rule_name || \"Ataque SSH\"}`,\n        description: `Fallo de login detectado desde ${sourceIp}`,\n        status: 'open',\n        priority: finalPriority, // <--- Ahora dirá HIGH si el score es 70\n        category: 'HIDS/Logs',\n        source_ip: sourceIp,\n        threat_score: score,\n        assigned_to: 'security_team@example.com',\n        created_at: new Date().toISOString(),\n        // 3. RELLENAR ALERT_REFERENCE (para que no salga null)\n        alert_reference: input.threat_intel || { info: \"No intel data\" }\n    }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        48
+      ],
+      "id": "b05a66dc-4d50-452d-83b2-4a0761611caa",
+      "name": "Generar Ticket"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "security_tickets",
+          "mode": "list",
+          "cachedResultName": "security_tickets"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {
+            "id": 0,
+            "threat_score": 0,
+            "ticket_number": "=",
+            "title": "=",
+            "description": "="
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ticket_number",
+              "displayName": "ticket_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "priority",
+              "displayName": "priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "category",
+              "displayName": "category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "source_ip",
+              "displayName": "source_ip",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "threat_score",
+              "displayName": "threat_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "assigned_to",
+              "displayName": "assigned_to",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "alert_reference",
+              "displayName": "alert_reference",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "updated_at",
+              "displayName": "updated_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        736,
+        80
+      ],
+      "id": "7f8bdf66-15de-4a6f-8b71-1877fe509a4b",
+      "name": "Insertar Ticket en BD",
+      "credentials": {
+        "postgres": {
+          "id": "5oNla0FyawiUWphG",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#nuevo-canal",
+          "mode": "name"
+        },
+        "text": "={{ \n`Nuevo ticket: *${$json.ticket_number}* - ${$json.title}\\n` +\n`Prioridad: ${$json.priority} | Categoría: ${$json.category}\\n` +\n`IP: ${$json.source_ip} | Score: ${$json.threat_score}\\n` +\n`Asignado: ${$json.assigned_to}` \n}}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2,
+      "position": [
+        944,
+        176
+      ],
+      "id": "98c59543-bbd1-4d2a-80be-fbbff152abcd",
+      "name": "Notificar en Slack",
+      "webhookId": "51d64ca6-4c2d-4070-b54a-290e312e31c9",
+      "credentials": {
+        "slackApi": {
+          "id": "gUEgU3Z0dFrsEYob",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const ticket = $input.first().json;\n\ntry {\n  await $http.post({\n    url: 'http://logstash:8081',\n    body: {\n      ...ticket,\n      type: 'ticket_created',\n      source: 'n8n_ticket_system',\n      timestamp: new Date().toISOString()\n    },\n    headers: { 'Content-Type': 'application/json' }\n  });\n} catch (error) {\n  console.log('Error enviando ticket a Logstash:', error.message);\n}\n\nconst response = {\n  success: true,\n  ticket_number: ticket.ticket_number,\n  message: `Ticket ${ticket.ticket_number} creado exitosamente`,\n  details: {\n    priority: ticket.priority,\n    category: ticket.category,\n    assigned_to: ticket.assigned_to,\n    timestamp: new Date().toISOString()\n  }\n};\n\nreturn [{ json: response }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1152,
+        80
+      ],
+      "id": "e502fbd5-d093-4f90-ab97-98ad16b201e4",
+      "name": "Finalizar Proceso"
+    },
+    {
+      "parameters": {
+        "fromEmail": "rafa.legendsss@gmail.com",
+        "toEmail": "rafa.legendsss@gmail.com",
+        "subject": "Generar alertas",
+        "emailFormat": "text",
+        "text": "=Alerta de Seguridad - Nuevo Ticket Detectado ID: {{ $json.id }} IP Maliciosa: {{ $json.source_ip }} Riesgo: {{ $json.risk_score }} Categoría: {{ $json.category }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        912,
+        0
+      ],
+      "id": "8618e42e-a5e0-4160-88d2-87aaa4146f02",
+      "name": "Send email",
+      "webhookId": "6b0a7bc7-0e9d-4669-ab6f-da7b843ae9ec",
+      "credentials": {
+        "smtp": {
+          "id": "adlWUgRnoj7ZoL1U",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const alert = $json; \n\nreturn {\n    json: {\n        ticket_number: 'TICKET-METRICA-' + Math.random().toString(36).substr(2, 6).toUpperCase(),\n        title: `[ALERTA] Incremento de baneo en Jail: ${alert.labels?.jail || 'n8n'}`,\n        description: \"Prometheus detectó un cambio en el contador. La IP detallada debe estar en el ticket anterior de Logs.\",\n        status: 'closed',\n        priority: 'medium',\n        category: 'IPS/Metrics',\n        source_ip: 'Ver Logstash', // Ya no ponemos \"Desconocida\", sino una indicación clara\n        threat_score: 100,\n        assigned_to: 'security_team@example.com',\n        created_at: new Date().toISOString()\n    }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        240
+      ],
+      "id": "bb5ea72a-6b6b-4d42-9863-cee9bb190611",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.origen_ticket }}",
+                    "rightValue": "=workflow_logs",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "4a6a3e3e-4f82-4bc2-bae7-245179a4d077"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "a6e819a8-3902-4099-b4db-e6b4456e7a5a",
+                    "leftValue": "={{ $json.origen_ticket }}",
+                    "rightValue": "alertmanager",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -160,
+        96
+      ],
+      "id": "7b2d26ac-1d39-46df-8499-fed881a2b6a4",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || {};\n\n// Detectamos el origen y lo guardamos en una palabra simple\nlet origen = \"otro\";\n\nif (body.alerts) {\n    origen = \"alertmanager\";\n} else if (body.rule_name) {\n    origen = \"workflow_logs\";\n}\n\n// Enviamos la palabra limpia y los datos originales\nreturn {\n    origen_ticket: origen,\n    datos_originales: body\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -496,
+        80
+      ],
+      "id": "bc62db70-51d4-49bf-b363-5248606c4b49",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "datos_originales.alerts",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        48,
+        192
+      ],
+      "id": "c56be77e-9db6-4a13-8ab6-0b705617da04",
+      "name": "Split Out"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Tickets": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar Ticket": {
+      "main": [
+        [
+          {
+            "node": "Insertar Ticket en BD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insertar Ticket en BD": {
+      "main": [
+        [
+          {
+            "node": "Notificar en Slack",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notificar en Slack": {
+      "main": [
+        [
+          {
+            "node": "Finalizar Proceso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send email": {
+      "main": [
+        [
+          {
+            "node": "Finalizar Proceso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Insertar Ticket en BD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Generar Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "d2767f38-80b6-4a4d-97f9-23aa4a8efb5c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8c36b1fcd5715c1d5c4dc72cf4a61bd3613a8fd6b8532a31460a88ccdd2cd369"
+  },
+  "id": "j6Qn64ARNQ2dKSwQ",
+  "tags": []
+}
