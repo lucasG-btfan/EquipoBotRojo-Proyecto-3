@@ -101,7 +101,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const result = $input.first().json;\n\nconst report = {\n  timestamp: new Date().toISOString(),\n  action: 'ip_blocking',\n  status: result.block_decision === 'block' ? 'blocked' : 'not_blocked',\n  details: {\n    ip: result.source_ip,\n    threat_score: result.threat_score,\n    severity: result.severity,\n    reason: result.reason,\n    blocked_until: result.blocked_until,\n    firewall_executed: result.firewall_executed || false\n  },\n  workflow: 'auto_blocking_v1'\n};\n\nconsole.log('Reporte de bloqueo:', JSON.stringify(report, null, 2));\n\nif (result.block_decision === 'block') {\n  try {\n    await $http.post({\n      url: 'http://logstash:8081',\n      body: {\n        ...report,\n        type: 'ip_block_event',\n        source: 'n8n_auto_block'\n      },\n      headers: { 'Content-Type': 'application/json' }\n    });\n  } catch (error) {\n    console.log('Error enviando a Logstash:', error.message);\n  }\n}\n\nreturn [{ json: report }];"
+        "jsCode": "const result = $input.first().json;\n\nconst report = {\n  timestamp: new Date().toISOString(),\n  action: 'ip_blocking',\n  status: result.block_decision === 'block' ? 'blocked' : 'not_blocked',\n  details: {\n    ip: result.source_ip,\n    threat_score: result.threat_score,\n    severity: result.severity,\n    reason: result.reason,\n    blocked_until: result.blocked_until,\n    firewall_executed: result.firewall_executed || false\n  },\n  workflow: 'auto_blocking_v1'\n};\n\nconsole.log('Reporte de bloqueo:', JSON.stringify(report, null, 2));\n\nif (result.block_decision === 'block') {\n  try {\n    await $http.post({\n      url: 'http://logstash:8080',\n      body: {\n        ...report,\n        type: 'ip_block_event',\n        source: 'n8n_auto_block'\n      },\n      headers: { 'Content-Type': 'application/json' }\n    });\n  } catch (error) {\n    console.log('Error enviando a Logstash:', error.message);\n  }\n}\n\nreturn [{ json: report }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -200,10 +200,10 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "0bf3380f-4df6-44f6-bb3d-0a613b912c79",
+  "versionId": "1119a4d2-703c-4ae5-aedd-1b56e21e7548",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "8c36b1fcd5715c1d5c4dc72cf4a61bd3613a8fd6b8532a31460a88ccdd2cd369"
+    "instanceId": "57bd743d1b079eea423476ba28a8c547ce72786c37d7a654d811f173a1ff9364"
   },
   "id": "clc2L6MJWypmwASu",
   "tags": []
