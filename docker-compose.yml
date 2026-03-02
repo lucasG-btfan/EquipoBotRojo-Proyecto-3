@@ -82,8 +82,16 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - LS_JAVA_OPTS=-Xmx256m -Xms256m
+      - LS_JAVA_OPTS=-Xmx1g -Xms1g  
       - XPACK_MONITORING_ENABLED=false
+      - LS_HTTP_MAX_CONTENT_LENGTH=100mb
+      - LS_HTTP_MAX_PENDING_REQUESTS=50
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+        reservations:
+          memory: 1g
     depends_on:
       - elasticsearch
     restart: unless-stopped
@@ -117,4 +125,5 @@ services:
 
 volumes:
   postgres_data:
+
   n8n_data:
