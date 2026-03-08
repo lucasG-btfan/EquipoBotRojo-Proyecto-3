@@ -4,6 +4,9 @@ services:
   syslog-ng:
     image: balabit/syslog-ng:latest
     container_name: syslog-ng
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
     ports:
       - "514:514/udp"
       - "601:601/tcp"

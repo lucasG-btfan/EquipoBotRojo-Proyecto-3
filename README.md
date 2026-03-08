@@ -150,7 +150,6 @@ Como se llevan los datos a elastic: Activamos el workflow de N8N. Para ver si re
 6. Dashboard de monitoreo
 
 ### Estructura de Alertas
-```json
 {
   "timestamp": "2024-01-19T12:30:00Z",
   "source_ip": "192.168.1.100",
@@ -160,15 +159,6 @@ Como se llevan los datos a elastic: Activamos el workflow de N8N. Para ver si re
   "threat_score": 75,
   "message": "Multiple failed login attempts detected"
 }
-
-# Fuentes de informacion
- - El curso de videos del profesor Ariel Enferrel acerca de Docker.
- - GitHub proporcionado por los profesores. Esto fue de vital importancia para las partes de Syslog-ng (archivo .conf), Logstash y la creacion de la base de datos de PostgreSQL, ademas de los nodos de N8N.
- - Consultas a IA sobre solucion de problemas puntuales, por ejemplo, personalizaciones o cambios pequeños en el syslog.conf, para que pueda funcionar.
- - https://aprendiendoarduino.wordpress.com/tag/flujos-node-red/
- - Videos de N8N: 
-   https://www.youtube.com/watch?v=3IvcIPDGB1k
-   https://www.youtube.com/watch?v=llzEpKUxl9E&list=PLMd59HZRUmEjuFxu8hsAvErZkn0_W-A6b (Proporcionado por los profesores)
 
 # EJERCICIO 4: Respuesta Automática y Notificaciones Multi-canal
 
@@ -218,8 +208,26 @@ Tiempo de respuesta: < 5 segundos.
 Canales de notificación: Email, Slack, PostgreSQL.
 Impacto: Automatiza el 80% de tareas repetitivas y mejora la trazabilidad.
 
-Fuentes de Información
 
-Trabajar con Slack:
--https://www.youtube.com/watch?v=md6KZo_-bfw&t=44s
--https://www.youtube.com/watch?v=md6KZo_-bfw&t=44s
+## Herramientas de analisis
+Esto es lo ultimo que hemos hecho hasta el momento. Hemos implementado las herramientas Prometheus/Alertmanager y Fail2ban. Estas nos permiten que nuestro sistema sea mas profesional y seguro, registrando y manejando eficientemente las alertas y bloqueando instantaneamente a aquellas IPs catalogadas como maliciosas.
+-Fail2ban: En su carpeta correspondiente, hemos configurado el jail, donde le especificamos que al momento de banear ignore nuestra IP (ya que somos nosotros mismos, y en caso de pruebas podria banearnos), y el archivo que debera leer en busca de instrucciones de baneo. Esto funciona ya que en el nodo 4 (auto bloqueo de IPs) hemos colocado un nodo que escribe en el archivo en cuestion, por lo que cuando se activa, el archivo es modificado y fail2ban detecta ese cambio, ejecutando el baneo.
+-Fail2ban-exporter: Actua como puente entre Fail2ban y Prometheus.
+-Alertmanager/Prometheus: Este conjunto de herramientas nos sirve para garantizar la disponibilidad y el monitoreo de métricas de nuestra infraestructura y vigilar que el sistema no se sature ni falle. Prometheus se conecta a Fail2ban-exporter para extraer datos sobre cuántas IPs están siendo bloqueadas en tiempo real y cuántos intentos fallidos se detectan. Alertmanager tambien envia una notificacion a Slack, corroborando que el baneo fue efectivo.
+
+# Fuentes de informacion
+ - El curso de videos del profesor Ariel Enferrel acerca de Docker.
+ - GitHub proporcionado por los profesores. Esto fue de vital importancia para las partes de Syslog-ng (archivo .conf), Logstash y la creacion de la base de datos de PostgreSQL, ademas de los nodos de N8N.
+ - Consultas a IA sobre solucion de problemas puntuales, por ejemplo, personalizaciones o cambios pequeños en el syslog.conf, para que pueda funcionar.
+ - https://aprendiendoarduino.wordpress.com/tag/flujos-node-red/
+ - Videos de N8N: 
+   https://www.youtube.com/watch?v=3IvcIPDGB1k
+   https://www.youtube.com/watch?v=llzEpKUxl9E&list=PLMd59HZRUmEjuFxu8hsAvErZkn0_W-A6b (Proporcionado por los profesores)
+ -Fail2ban: https://youtu.be/kgdoVeyoO2E?si=0zoXm4h6aHaLLAeP
+-Alertmanager/Prometheus: 
+  https://www.youtube.com/watch?v=93aafqTJRwQ
+  https://youtu.be/2fDFLc7Yovc?si=Qy9TXjG11UF3pFMD
+  https://youtu.be/QKkrsY-sndg?si=QQER5zQkAEV1JzK6
+-Trabajar con Slack:
+ https://www.youtube.com/watch?v=md6KZo_-bfw&t=44s
+ https://www.youtube.com/watch?v=md6KZo_-bfw&t=44s
