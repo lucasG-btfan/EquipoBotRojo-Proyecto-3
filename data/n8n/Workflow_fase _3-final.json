@@ -1,0 +1,696 @@
+{
+  "name": "Workflow_fase _3-final",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1600,
+        112
+      ],
+      "id": "df90beae-8c6d-499e-892a-699ba9fca475",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "fileSelector": "/root/.n8n-files/security/alerts.log",
+        "options": {
+          "dataPropertyName": "data"
+        }
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        -1408,
+        112
+      ],
+      "id": "73b04e26-4caf-4734-b0ce-6218992bc754",
+      "name": "Read/Write Files from Disk"
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        -1152,
+        112
+      ],
+      "id": "ebed5862-a511-4acd-a20f-74b44de1aa7a",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst rawText = items[0].json.data || items[0].json.text || \"\";\n\nif (!rawText) {\n  throw new Error(\"No se encontró texto en el nodo anterior. Revisa el nodo Extract from File.\");\n}\n\nconst lines = rawText.split('\\n').filter(line => line.trim() !== '');\n\nreturn lines.map(line => {\n  return {\n    json: {\n      timestamp: new Date().toISOString(),\n      raw: line,\n      file: 'auth.log',\n      source: 'real_file'\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -864,
+        112
+      ],
+      "id": "e545e939-5228-4404-b962-8de61d18b98a",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "const logs = $input.all();\nconst rules = [\n  { id: 1, name: 'SSH Brute Force', pattern: 'Failed password', severity: 'high', threshold: 1, description: 'Fallo de login SSH' },\n  { id: 2, name: 'Port Scan', pattern: 'DPT=', severity: 'medium', threshold: 3, description: 'Escaneo de puertos detectado' },\n  { id: 3, name: 'Root Login Attempt', pattern: 'Failed password for root', severity: 'critical', threshold: 1, description: '¡Intento crítico de acceso como ROOT!' },\n  { id: 4, name: 'Kernel Oops', pattern: 'Oops', severity: 'critical', threshold: 1, description: 'Error crítico del sistema (Kernel)' },\n  { id: 5, name: 'Access Denied', pattern: 'Access denied', severity: 'high', threshold: 1, description: 'Acceso denegado a recurso' },\n  { id: 6, name: 'Service Restart', pattern: 'Started', severity: 'info', threshold: 1, description: 'Servicio reiniciado' }\n];\n\nconst extractIP = (text) => {\n  const ipRegex = /\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b/;\n  const match = text.match(ipRegex);\n  return match ? match[0] : '127.0.0.1';\n};\n\nconst logGroups = {};\nlogs.forEach(item => {\n  const log = item.json;\n  const ip = (log.source_ip && log.source_ip !== 'unknown') ? log.source_ip : extractIP(log.raw || '');\n  const key = `${log.type || 'auth'}_${ip}`;\n  if (!logGroups[key]) logGroups[key] = [];\n  logGroups[key].push({...log, source_ip: ip});\n});\n\nconst alerts = [];\n\nfor (const rule of rules) {\n  for (const [key, logGroup] of Object.entries(logGroups)) {\n    const matchingLogs = logGroup.filter(log => {\n      try {\n        const regex = new RegExp(rule.pattern, 'i');\n        return regex.test(log.raw);\n      } catch (e) { return false; }\n    });\n    if (matchingLogs.length >= rule.threshold) {\n      alerts.push({\n        rule_id: rule.id,\n        rule_name: rule.name,\n        severity: rule.severity,\n        category: 'authentication_failure',\n        source_ip: matchingLogs[0].source_ip,\n        target_host: 'server1',\n        event_count: matchingLogs.length,\n        description: `${rule.description} desde ${matchingLogs[0].source_ip}`,\n        raw_log: matchingLogs[0].raw,\n        timestamp: new Date().toISOString()\n      });\n    }\n  }\n}\n\nif (alerts.length === 0) {\n  return [{\n    json: {\n      rule_name: 'Monitoring Active',\n      severity: 'info',\n      category: 'system',\n      description: 'No threats detected in logs',\n      source_ip: '0.0.0.0'\n    }\n  }];\n}\n\nreturn alerts.map(alert => ({ json: alert }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -560,
+        112
+      ],
+      "id": "dc227b1d-f258-4ac4-be61-8815f415ad61",
+      "name": "Detectar Amenazas"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nconst ip = items[0].json.source_ip || '0.0.0.0';\nconst isPrivateIP = ip.startsWith('10.') ||\n                   ip.startsWith('192.168.') ||\n                   (ip.startsWith('172.') && parseInt(ip.split('.')[1]) >= 16 && parseInt(ip.split('.')[1]) <= 31);\n\nconst threatDB = {\n  '192.168.1.50': { reputation: 'malicious', tags: ['sql_injection', 'web_attack'], confidence: 0.85 },\n  '10.0.0.10':    { reputation: 'suspicious', tags: ['port_scan'], confidence: 0.65 }\n};\n\nitems[0].json.threat_intel = {\n  is_private_ip: isPrivateIP,\n  threat_info: threatDB[ip] || { reputation: 'unknown', tags: [], confidence: 0 },\n  geo_info: { country: isPrivateIP ? 'INTERNAL' : 'UNKNOWN', asn: 'N/A' },\n  enrichment_timestamp: new Date().toISOString()\n};\n\nlet riskScore = 0;\nswitch(items[0].json.severity) {\n  case 'critical': riskScore = 90; break;\n  case 'high':     riskScore = 70; break;\n  case 'medium':   riskScore = 50; break;\n  default:         riskScore = 30;\n}\n\nif (items[0].json.threat_intel.threat_info.reputation === 'malicious')  riskScore += 20;\nelse if (items[0].json.threat_intel.threat_info.reputation === 'suspicious') riskScore += 10;\nif (items[0].json.event_count && items[0].json.event_count > 3) riskScore += 15;\n\nitems[0].json.risk_score = Math.min(100, riskScore);\nitems[0].json.risk_level = riskScore >= 80 ? 'CRITICAL' :\n                            riskScore >= 60 ? 'HIGH' :\n                            riskScore >= 40 ? 'MEDIUM' : 'LOW';\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -352,
+        112
+      ],
+      "id": "7984ba32-0bf9-47a3-8429-874ad2715d4d",
+      "name": "Enriquecimiento Threat Intel"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.severity }}",
+                    "rightValue": "info",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEquals"
+                    },
+                    "id": "ae1ffb72-f4ec-4b10-8f05-6c0be29138b6"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "1e1a5dda-dcc2-4514-9689-a330cbdf31e8",
+                    "leftValue": "={{ $json.severity }}",
+                    "rightValue": "info",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -128,
+        112
+      ],
+      "id": "32e8b8d5-16e1-465c-a966-2fe8d7ff59bf",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "eff1dded-b11d-4935-8b10-34be76f9f3ee",
+              "leftValue": "={{ $json.risk_level }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "31eb5fb9-ba21-4d77-8916-bdd04dfbe695",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "eff1dded-b11d-4935-8b10-34be76f9f3ee",
+              "leftValue": "={{ $json.risk_level }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        576
+      ],
+      "id": "22bc4691-0b4c-44f1-8f2d-6d0cbe2aeae5",
+      "name": "Filter1"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "alerts",
+          "mode": "list",
+          "cachedResultName": "alerts"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "severity": "={{ $json.severity }}",
+            "category": "={{ $json.category }}",
+            "description": "={{ $json.description }}",
+            "status": "new",
+            "timestamp": "={{ new Date() }}",
+            "event_count": 1,
+            "source_ip": "={{ $json.source_ip }}",
+            "raw_log": "={{ $json.raw_log }}",
+            "risk_score": "={{ $json.risk_score }}",
+            "risk_level": "={{ $json.risk_level }}",
+            "threat_reputation": "={{ $json.threat_intel.threat_info.reputation }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "severity",
+              "displayName": "severity",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "category",
+              "displayName": "category",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "source_ip",
+              "displayName": "source_ip",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "event_count",
+              "displayName": "event_count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "raw_log",
+              "displayName": "raw_log",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "assigned_to",
+              "displayName": "assigned_to",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "notes",
+              "displayName": "notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "resolved_at",
+              "displayName": "resolved_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "risk_score",
+              "displayName": "risk_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "risk_level",
+              "displayName": "risk_level",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "threat_reputation",
+              "displayName": "threat_reputation",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        240,
+        -32
+      ],
+      "id": "91c61543-bdab-4738-981f-147bfd461b98",
+      "name": "Insert rows in a table",
+      "retryOnFail": true,
+      "credentials": {
+        "postgres": {
+          "id": "xQDinEhC3bDgBeQn",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "channel": "#nuevo-canal",
+        "text": "=Nuevo ticket: {{ $json.id }} - {{ $json.category }}\nPrioridad: {{ $json.severity }} | Categoría: {{ $json.category }}\nIP: {{ $json.source_ip }} | Score: {{ $json.risk_score }}\nAsignado: {{ $json.assigned_to || 'Sin asignar' }}",
+        "otherOptions": {},
+        "attachments": []
+      },
+      "id": "e01f841a-1f69-4f42-966e-370b69919e60",
+      "name": "Send Slack Message",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 1,
+      "position": [
+        416,
+        -32
+      ],
+      "credentials": {
+        "slackApi": {
+          "id": "dgEXu72QNPkfGQdY",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook-test/webhook/create-ticket",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"rule_name\": \"{{ $json.rule_name }}\",\n  \"source_ip\": \"{{ $json.source_ip }}\",\n  \"risk_score\": {{ $json.risk_score }},\n  \"description\": \"{{ $json.description }}\",\n  \"threat_intel\": {{ JSON.stringify($json.threat_intel) }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        336,
+        160
+      ],
+      "id": "e3928061-38b9-4fcb-919b-6f0b8619f3eb",
+      "name": "HTTP Request - Create Ticket"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/auto-block",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "title",
+              "value": "Alerta de seguridad"
+            },
+            {
+              "name": "rule_name",
+              "value": "={{ $json.rule_name }}"
+            },
+            {
+              "name": "severity",
+              "value": "={{ $json.severity }}"
+            },
+            {
+              "name": "source_ip",
+              "value": "={{ $json.source_ip }}"
+            },
+            {
+              "name": "risk_score",
+              "value": "={{ $json.risk_score }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        336,
+        368
+      ],
+      "id": "7481250f-1c03-4608-8d9b-15763709aba1",
+      "name": "HTTP Request - Auto Block"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook-test/wazuh-monitor",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"rule_name\": \"{{ $json.rule_name }}\",\n  \"severity\": \"{{ $json.severity }}\",\n  \"source_ip\": \"{{ $json.source_ip }}\",\n  \"risk_score\": {{ $json.risk_score }},\n  \"description\": \"{{ $json.description }}\",\n  \"category\": \"{{ $json.category }}\",\n  \"event_count\": {{ $json.event_count || 1 }},\n  \"raw_log\": \"{{ $json.raw_log }}\",\n  \"threat_intel\": {{ JSON.stringify($json.threat_intel) }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        464,
+        576
+      ],
+      "id": "1dd4403c-1ffc-4650-8942-30f9feb1bc04",
+      "name": "HTTP Request - Wazuh Monitor"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nconsole.log(`No significant alerts (${items.length} info/low severity items)`);\nitems.forEach(item => {\n  const alert = item.json;\n  console.log(`Info alert: ${alert.rule_name || 'Unknown'} - ${alert.description || 'No description'}`);\n});\n\nreturn [{\n  json: {\n    action: 'logged_only',\n    message: `No action required for ${items.length} low-severity alerts`,\n    timestamp: new Date().toISOString(),\n    alerts_processed: items.length,\n    details: items.map(item => item.json.rule_name || 'Unknown')\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        192,
+        736
+      ],
+      "id": "330c82fe-90e2-4976-bb43-c9637948a521",
+      "name": "Nodo 8: Log Only"
+    },
+    {
+      "parameters": {
+        "jsCode": "const notifications = $input.all();\n\nconst summary = {\n  timestamp: new Date().toISOString(),\n  workflow: 'security_monitoring',\n  status: 'completed',\n  alerts_processed: notifications.length,\n  notifications_sent: notifications.length,\n  next_run: new Date(Date.now() + 5 * 60000).toISOString()\n};\n\nconsole.log('Summary:', JSON.stringify(summary, null, 2));\n\nreturn [{ json: summary }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        -32
+      ],
+      "id": "134ffed8-684c-403b-965e-7b137da10017",
+      "name": "Nodo 9: Resumen"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Detectar Amenazas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detectar Amenazas": {
+      "main": [
+        [
+          {
+            "node": "Enriquecimiento Threat Intel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enriquecimiento Threat Intel": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Filter1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Nodo 8: Log Only",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Insert rows in a table",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request - Create Ticket",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request - Auto Block",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request - Wazuh Monitor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert rows in a table": {
+      "main": [
+        [
+          {
+            "node": "Send Slack Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Slack Message": {
+      "main": [
+        [
+          {
+            "node": "Nodo 9: Resumen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "d1eeda8b-1db5-483c-b94a-3a6f37d3b338",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "aa6fa7d3ef01e2cb7f3cea139ba184acf8519b324878002687633aeac043ce00"
+  },
+  "id": "hnqKfxHj47hTiqa7",
+  "tags": []
+}

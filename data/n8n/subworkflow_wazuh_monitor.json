@@ -1,0 +1,198 @@
+{
+  "name": "subworkflow_wazuh_monitor",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wazuh-monitor",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        640,
+        304
+      ],
+      "id": "84a7f473-98a6-4d22-b26c-5dad15b19ec0",
+      "name": "Webhook - Recibir Alerta",
+      "webhookId": "wazuh-monitor"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://wazuh-manager:55000/security/user/authenticate",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        864,
+        304
+      ],
+      "id": "501f5404-2398-4271-8e67-09fb36f840dc",
+      "name": "Obtener Token JWT",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "jq4EbL7XFpuUGiqk",
+          "name": "Wazuh API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extraer token y preparar el payload para Wazuh\nconst token = $input.first().json.data.token;\nconst alert = $('Webhook - Recibir Alerta').first().json.body;\nconst threatInfo = alert.threat_intel || {};\n\nconst wazuhAlert = {\n  timestamp: alert.timestamp || new Date().toISOString(),\n  rule: {\n    id: alert.rule_id || 100001,\n    level: alert.severity === 'critical' ? 12 :\n           alert.severity === 'high' ? 8 :\n           alert.severity === 'medium' ? 5 : 3,\n    description: alert.description || 'No description',\n    mitre: {\n      tactic: alert.category === 'authentication_failure' ? 'Credential Access' : 'Unknown',\n      technique: alert.rule_name || 'Unknown'\n    }\n  },\n  agent: { id: '001', name: 'n8n-workflow' },\n  data: {\n    srcip: alert.source_ip || '0.0.0.0',\n    rule_name: alert.rule_name || 'Unknown',\n    risk_score: alert.risk_score || 0,\n    risk_level: alert.risk_level || 'LOW',\n    event_count: alert.event_count || 1,\n    threat_intel: {\n      reputation: threatInfo.threat_info?.reputation || 'unknown',\n      confidence: threatInfo.threat_info?.confidence || 0,\n      is_private_ip: threatInfo.is_private_ip || false,\n      geo_info: threatInfo.geo_info || {}\n    }\n  },\n  location: 'n8n_workflow',\n  full_log: JSON.stringify(alert.raw_log || alert)\n};\n\nreturn [{ json: { \n  wazuh_token: token, \n  wazuh_alert: JSON.stringify(wazuhAlert), \n  original_alert: alert \n} }]"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1088,
+        304
+      ],
+      "id": "7be8fa12-89ee-49ff-8200-0cb117f69c47",
+      "name": "Preparar Payload Wazuh"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://wazuh-manager:55000/events",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.wazuh_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ events: [$json.wazuh_alert] }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1312,
+        304
+      ],
+      "id": "26729b75-2525-41e0-8cc9-cbdfa789d025",
+      "name": "Enviar a Wazuh"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://logstash:8080",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"source\": \"n8n\",\n  \"severity\": \"{{ $('Preparar Payload Wazuh').first().json.original_alert.severity }}\",\n  \"rule_name\": \"{{ $('Preparar Payload Wazuh').first().json.original_alert.rule_name }}\",\n  \"description\": \"{{ $('Preparar Payload Wazuh').first().json.original_alert.description }}\",\n  \"source_ip\": \"{{ $('Preparar Payload Wazuh').first().json.original_alert.source_ip }}\",\n  \"timestamp\": \"{{ new Date().toISOString() }}\",\n  \"category\": \"{{ $('Preparar Payload Wazuh').first().json.original_alert.category }}\",\n  \"event_count\": {{ $('Preparar Payload Wazuh').first().json.original_alert.event_count || 1 }},\n  \"data_source\": \"n8n_workflow\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1520,
+        304
+      ],
+      "id": "4b8c3dfc-c3b2-49b0-af1a-e1129680b056",
+      "name": "Enviar a Logstash"
+    },
+    {
+      "parameters": {
+        "jsCode": "console.log('Wazuh y Logstash: envío completado correctamente.');\nreturn [{ json: { success: true, timestamp: new Date().toISOString() } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1744,
+        304
+      ],
+      "id": "8fa737c2-4966-43df-bf8f-dea5898b2d5b",
+      "name": "Log Éxito"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook - Recibir Alerta": {
+      "main": [
+        [
+          {
+            "node": "Obtener Token JWT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Token JWT": {
+      "main": [
+        [
+          {
+            "node": "Preparar Payload Wazuh",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Payload Wazuh": {
+      "main": [
+        [
+          {
+            "node": "Enviar a Wazuh",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar a Wazuh": {
+      "main": [
+        [
+          {
+            "node": "Enviar a Logstash",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar a Logstash": {
+      "main": [
+        [
+          {
+            "node": "Log Éxito",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "9efc00ea-03e8-4377-8835-2d3159f79d57",
+  "meta": {
+    "instanceId": "da3329969e271134e2fed934d3c1b2bef305b1454357c1d681626d4813a110b8"
+  },
+  "id": "usNjpXHqwyCFOF3o",
+  "tags": []
+}
