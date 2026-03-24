@@ -1,0 +1,211 @@
+{
+  "name": "Sistema de Tickets Automático",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "/webhook/create-ticket",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [
+        -704,
+        80
+      ],
+      "id": "85188dfd-35c8-45e5-8ef6-86043a65fa62",
+      "name": "Webhook Tickets",
+      "webhookId": "ticket-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputData = $input.first().json;\nconst alert = inputData.body || inputData; \n\nconst ticketNumber = 'TICKET-' + \n  new Date().getFullYear().toString().slice(-2) + \n  ('0' + (new Date().getMonth() + 1)).slice(-2) + \n  ('0' + new Date().getDate()).slice(-2) + \n  '-' + \n  Math.random().toString(36).substr(2, 6).toUpperCase();\n\nfunction getPriority(severity, riskScore) {\n  const sev = String(severity || 'low').toLowerCase();\n  const score = Number(riskScore) || 0;\n  if (sev === 'critical' || score >= 80) return 'high';\n  if (sev === 'high' || score >= 60) return 'medium';\n  return 'low';\n}\n\nfunction getCategory(ruleName) {\n  const rule = String(ruleName || '').toLowerCase();\n  if (rule.includes('ssh') || rule.includes('login') || rule.includes('auth')) return 'Authentication';\n  if (rule.includes('sql') || rule.includes('injection')) return 'Web Attack';\n  if (rule.includes('scan') || rule.includes('port')) return 'Reconnaissance';\n  if (rule.includes('malware') || rule.includes('virus')) return 'Malware';\n  return 'General Security';\n}\n\nconst cat = getCategory(alert.rule_name);\n\nconst ticketData = {\n  ticket_number: ticketNumber,\n  title: `[${String(alert.severity || 'INFO').toUpperCase()}] ${alert.rule_name || 'Alerta de Seguridad'}`,\n  description: alert.description || `Detección automática en IP: ${alert.source_ip || 'Desconocida'}`,\n  status: 'open',\n  priority: getPriority(alert.severity, alert.risk_score),\n  category: cat,\n  source_ip: alert.source_ip || '0.0.0.0',\n  threat_score: alert.risk_score || 0,\n  assigned_to: 'security_team@example.com',\n  created_at: new Date().toISOString(),\n  alert_reference: JSON.stringify(alert) \n};\n\nreturn [{ json: ticketData }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -496,
+        80
+      ],
+      "id": "b05a66dc-4d50-452d-83b2-4a0761611caa",
+      "name": "Generar Ticket"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "security_tickets",
+          "mode": "list",
+          "cachedResultName": "security_tickets"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -304,
+        80
+      ],
+      "id": "7f8bdf66-15de-4a6f-8b71-1877fe509a4b",
+      "name": "Insertar Ticket en BD",
+      "credentials": {
+        "postgres": {
+          "id": "5oNla0FyawiUWphG",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#nuevo-canal",
+          "mode": "name"
+        },
+        "text": "={{ `Nuevo ticket: *${$json.ticket_number}* - ${$json.title}\\n` +\n`Prioridad: ${$json.priority} | Categoría: ${$json.category}\\n` +\n`IP: ${$json.source_ip} | Score: ${$json.threat_score}\\n` +\n`Asignado: ${$json.assigned_to}` }}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2,
+      "position": [
+        -96,
+        176
+      ],
+      "id": "98c59543-bbd1-4d2a-80be-fbbff152abcd",
+      "name": "Notificar en Slack",
+      "webhookId": "51d64ca6-4c2d-4070-b54a-290e312e31c9",
+      "credentials": {
+        "slackApi": {
+          "id": "gUEgU3Z0dFrsEYob",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const ticket = $input.first().json;\n\ntry {\n  await $http.post({\n    url: 'http://logstash:8081',\n    body: {\n      ...ticket,\n      type: 'ticket_created',\n      source: 'n8n_ticket_system',\n      timestamp: new Date().toISOString()\n    },\n    headers: { 'Content-Type': 'application/json' }\n  });\n} catch (error) {\n  console.log('Error enviando ticket a Logstash:', error.message);\n}\n\nconst response = {\n  success: true,\n  ticket_number: ticket.ticket_number,\n  message: `Ticket ${ticket.ticket_number} creado exitosamente`,\n  details: {\n    priority: ticket.priority,\n    category: ticket.category,\n    assigned_to: ticket.assigned_to,\n    timestamp: new Date().toISOString()\n  }\n};\n\nreturn [{ json: response }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        112,
+        80
+      ],
+      "id": "e502fbd5-d093-4f90-ab97-98ad16b201e4",
+      "name": "Finalizar Proceso"
+    },
+    {
+      "parameters": {
+        "fromEmail": "rafa.legendsss@gmail.com",
+        "toEmail": "rafa.legendsss@gmail.com",
+        "subject": "Generar alertas",
+        "emailFormat": "text",
+        "text": "=Alerta de Seguridad - Nuevo Ticket Detectado ID: {{ $json.id }} IP Maliciosa: {{ $json.source_ip }} Riesgo: {{ $json.risk_score }} Categoría: {{ $json.category }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        -128,
+        0
+      ],
+      "id": "8618e42e-a5e0-4160-88d2-87aaa4146f02",
+      "name": "Send email",
+      "webhookId": "6b0a7bc7-0e9d-4669-ab6f-da7b843ae9ec",
+      "credentials": {
+        "smtp": {
+          "id": "adlWUgRnoj7ZoL1U",
+          "name": "SMTP account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Tickets": {
+      "main": [
+        [
+          {
+            "node": "Generar Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar Ticket": {
+      "main": [
+        [
+          {
+            "node": "Insertar Ticket en BD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insertar Ticket en BD": {
+      "main": [
+        [
+          {
+            "node": "Notificar en Slack",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notificar en Slack": {
+      "main": [
+        [
+          {
+            "node": "Finalizar Proceso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send email": {
+      "main": [
+        [
+          {
+            "node": "Finalizar Proceso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "89ebbe23-0838-4453-b486-0d2fd02b5bc5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e9af1fd68f298f1d66e435af1bc92250ca76158be14ebd2d8c8195129d45218f"
+  },
+  "id": "j6Qn64ARNQ2dKSwQ",
+  "tags": []
+}

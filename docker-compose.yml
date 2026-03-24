@@ -4,6 +4,9 @@ services:
   syslog-ng:
     image: balabit/syslog-ng:latest
     container_name: syslog-ng
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
     ports:
       - "514:514/udp"
       - "601:601/tcp"
@@ -53,6 +56,7 @@ services:
       - discovery.type=single-node
       - ES_JAVA_OPTS=-Xms1g -Xmx1g
       - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false  
     ports:
       - "9200:9200"
       - "9300:9300"
@@ -60,25 +64,102 @@ services:
       - ./elastic_data:/usr/share/elasticsearch/data
     restart: always
 
+  fail2ban:
+    image: crazymax/fail2ban:latest
+    container_name: fail2ban
+    network_mode: "host"  
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - ./fail2ban_config/jail.local:/etc/fail2ban/jail.local:ro
+      - ./fail2ban_config/filter.d:/etc/fail2ban/filter.d:ro
+      - ./logs:/var/log:ro
+      - fail2ban_data:/var/run/fail2ban
+      - fail2ban_db:/data
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+    ports: 
+     - "9090:9090"
+    restart: unless-stopped
+    
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    volumes:
+      - ./prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    ports:
+      - "9093:9093"
+    restart: unless-stopped
+  
+  fail2ban-exporter:
+    build:
+      context: .
+      dockerfile: Dockerfile.exporter
+    container_name: fail2ban-exporter
+    user: root  
+    ports:
+      - "9121:9121"
+    volumes:
+      - fail2ban_db:/data:ro
+    restart: unless-stopped
+    networks:
+      - default
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.13.0
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+    restart: unless-stopped
+
   logstash:
     image: docker.elastic.co/logstash/logstash:8.13.0
     container_name: logstash
     volumes:
       - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
       - ./logs:/var/log/security:ro
+      - ./logstash/geoip:/usr/share/geoip:ro  
     ports:
-      - "5044:5044"
-      - "8080:8080" 
+      - "8080:8080"
+    environment:
+      - LS_JAVA_OPTS=-Xmx1g -Xms1g  
+      - XPACK_MONITORING_ENABLED=false
+      - LS_HTTP_MAX_CONTENT_LENGTH=100mb
+      - LS_HTTP_MAX_PENDING_REQUESTS=50
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+        reservations:
+          memory: 1g
     depends_on:
       - elasticsearch
+    restart: unless-stopped
 
   n8n:
     image: n8nio/n8n:latest
     container_name: n8n
+    user: root
     ports:
       - "5678:5678"
     environment:
       - N8N_BASIC_AUTH_ACTIVE=false
+      - N8N_CONFIG_FILES=/home/node/.n8n/config
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+      - N8N_RUNNERS_ENABLED=true
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+      - N8N_GIT_NODE_DISABLE_BARE_REPOS=true
       - DB_TYPE=postgresdb
       - DB_POSTGRESDB_HOST=postgres
       - DB_POSTGRESDB_PORT=5432
@@ -87,13 +168,14 @@ services:
       - DB_POSTGRESDB_PASSWORD=db_pass
       - N8N_DIAGNOSTICS_ENABLED=false
     volumes:
-      - n8n_data:/home/node/.n8n
-      - ./logs:/home/node/logs:ro
+      - ./n8n_config:/home/node/.n8n
+      - ./logs:/home/node/logs
     depends_on:
-      postgres:
-        condition: service_healthy
+      - postgres
     restart: unless-stopped
 
 volumes:
   postgres_data:
   n8n_data:
+  fail2ban_data:
+  fail2ban_db:

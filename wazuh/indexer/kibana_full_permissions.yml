@@ -1,0 +1,31 @@
+_meta:
+  type: "roles"
+  config_version: 2
+
+custom_kibana_role:
+  reserved: true
+  cluster_permissions:
+    - "*"
+    - "cluster:monitor/nodes/info"
+    - "cluster:monitor/state"
+    - "cluster:monitor/health"
+    - "cluster:monitor/nodes/stats"
+    - "cluster:admin/opensearch/dashboards/notifications/*"
+    - "cluster:admin/opensearch/ism/*"
+  index_permissions:
+    - index_patterns:
+        - "*"
+      allowed_actions:
+        - "*"
+        - "indices:admin/template/get"
+        - "indices:admin/template/put"
+        - "indices:admin/mapping/put"
+        - "indices:data/write/bulk"
+        - "indices:data/read/search"
+        - "indices:monitor/settings/get"
+  tenant_permissions:
+    - tenant_patterns:
+        - "global_tenant"
+      allowed_actions:
+        - "kibana_all_read"
+        - "kibana_all_write"

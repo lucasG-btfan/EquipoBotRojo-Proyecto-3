@@ -1,0 +1,11 @@
+groups:
+  - name: fail2ban_alerts
+    rules:
+      - alert: IpBaneadaDetectada
+        expr: increase(fail2ban_banned_ips[5m]) > 0 
+        for: 0m 
+        labels:
+          severity: critical
+        annotations:
+          summary: "IP Bloqueada por Fail2ban"
+          description: "Se ha detectado una o más IP/s baneadas en el sistema de seguridad."

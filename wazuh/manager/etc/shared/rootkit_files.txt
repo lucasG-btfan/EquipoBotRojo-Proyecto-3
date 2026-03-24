@@ -1,0 +1,8 @@
+# Rootkit files database 
+/var/run/.tmp 
+/var/run/.system 
+/var/run/.X0 
+/var/run/.X0-unix 
+/var/run/.xrdp 
+/var/run/.xorg 
+/var/run/.pulse 

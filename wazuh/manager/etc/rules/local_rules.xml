@@ -1,0 +1,22 @@
+<group name="local,syslog,sshd">
+  <rule id="100001" level="10">
+    <if_sid>5716</if_sid>
+    <match>^Failed password for root</match>
+    <description>SSH brute force attack detected against root user</description>
+    <group>authentication_failures</group>
+  </rule>
+
+  <rule id="100002" level="7">
+    <if_sid>5716</if_sid>
+    <match>scan|nmap|masscan</match>
+    <description>Port scanning activity detected</description>
+    <group>reconnaissance</group>
+  </rule>
+
+  <rule id="100003" level="8">
+    <if_sid>31101</if_sid>
+    <match>sql injection|union select|exec xp|drop table|insert into|select.*from</match>
+    <description>Possible SQL injection attack</description>
+    <group>web_attack</group>
+  </rule>
+</group>

@@ -1,0 +1,50 @@
+FROM python:3.9-slim
+
+# Instalamos sqlite3 para leer la base de datos de fail2ban
+RUN apt-get update && apt-get install -y sqlite3 && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+RUN pip install --no-cache-dir prometheus-client
+
+RUN echo 'import time, sqlite3, os\n\
+from prometheus_client import start_http_server, Gauge\n\
+\n\
+F2B_UP = Gauge("fail2ban_up", "Estado del exportador")\n\
+F2B_BANNED = Gauge("fail2ban_banned_ips", "IPs actualmente baneadas", ["jail"])\n\
+\n\
+DB_PATH = "/data/db/fail2ban.sqlite3"\n\
+\n\
+def update_metrics():\n\
+    if not os.path.exists(DB_PATH):\n\
+        print(f"Archivo no encontrado en {DB_PATH}")\n\
+        F2B_UP.set(0)\n\
+        return\n\
+    \n\
+    try:\n\
+        # Conexión en modo lectura para no bloquear la base de datos\n\
+        conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)\n\
+        cursor = conn.cursor()\n\
+        # Contamos IPs baneadas en la jaula n8n-auth-jail\n\
+        cursor.execute("SELECT jail, COUNT(*) FROM bans GROUP BY jail")\n\
+        results = cursor.fetchall()\n\
+        \n\
+        F2B_BANNED.clear()\n\
+        for jail, count in results:\n\
+            F2B_BANNED.labels(jail=jail).set(count)\n\
+            print(f"Jail {jail}: {count} baneados")\n\
+        \n\
+        F2B_UP.set(1)\n\
+        conn.close()\n\
+    except Exception as e:\n\
+        print(f"Error: {e}")\n\
+        F2B_UP.set(0)\n\
+\n\
+if __name__ == "__main__":\n\
+    start_http_server(9121)\n\
+    print("Exportador por Base de Datos iniciado")\n\
+    while True:\n\
+        update_metrics()\n\
+        time.sleep(15)' > exporter.py
+
+EXPOSE 9121
+CMD ["python", "exporter.py"]
