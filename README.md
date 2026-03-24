@@ -231,3 +231,117 @@ Esto es lo ultimo que hemos hecho hasta el momento. Hemos implementado las herra
 -Trabajar con Slack:
  https://www.youtube.com/watch?v=md6KZo_-bfw&t=44s
  https://www.youtube.com/watch?v=md6KZo_-bfw&t=44s
+
+## Integración de Wazuh SIEM
+Wazuh es una plataforma open-source de seguridad que actúa como SIEM (Security Information and Event Management). En este ejercicio integramos Wazuh al stack existente para obtener monitoreo en tiempo real de agentes, correlación de eventos y visualización de alertas de seguridad.
+Componentes agregados al stack
+
+Wazuh Manager: Motor central de análisis y correlación (puerto 55000 API, 1516 agentes)
+Wazuh Indexer: Base de datos OpenSearch para almacenamiento de eventos (puerto 9201)
+Wazuh Dashboard: Interfaz web de visualización (puerto 5602)
+
+# Consideraciones importantes antes de levantar el stack
+Archivo wazuh.yml (Dashboard → Manager)
+El archivo wazuh/dashboard/wazuh.yml usa el nombre de servicio Docker en lugar de IP, ya que las IPs son dinámicas y cambian al recrear contenedores:
+yamlhosts:
+  - default:
+      url: http://wazuh-manager
+      port: 55000
+      username: wazuh-wui
+      password: "MyS3cr37P450r"
+      run_as: false
+Este archivo está montado como :ro (read-only). No cambiar a :rw porque el script de inicio del contenedor sobreescribiría el archivo y corrompería el YAML.
+Archivo api.yaml (seguridad de la API)
+El archivo wazuh/manager/etc/api.yaml tiene use_only_authd: no. No revertir a yes porque causa timeout y error 500 en el plugin del dashboard.
+client.keys (registro de agentes)
+El archivo wazuh/manager/etc/client.keys está montado como volumen desde el host para que los agentes registrados persistan aunque se recree el contenedor. Si se borra, hay que volver a registrar los agentes.
+Levantar el stack
+bashdocker compose up -d
+Verificar que los tres componentes estén corriendo:
+bashdocker ps | grep wazuh
+Acceder al dashboard: http://localhost:5602
+
+Usuario: admin
+Contraseña: Admin1234!
+
+# Problema conocido en Windows: localhost no responde
+Si localhost:5602 no responde pero 127.0.0.1:5602 sí, ejecutar en PowerShell como administrador y reiniciar el equipo:
+powershellnetsh winsock reset
+netsh int ip reset
+Registrar un agente Windows
+# Paso 1 — Descargar el instalador
+Descargar wazuh-agent-4.7.2-1.msi desde https://documentation.wazuh.com/current/installation-guide/wazuh-agent/wazuh-agent-package-windows.html
+# Paso 2 — Instalar el agente (PowerShell como administrador)
+powershellmsiexec /i "C:\Users\TU_USUARIO\Downloads\wazuh-agent-4.7.2-1.msi" /q WAZUH_MANAGER="localhost" WAZUH_AGENT_NAME="nombre-equipo"
+# Paso 3 — Configurar el puerto en ossec.conf
+Editar C:\Program Files (x86)\ossec-agent\ossec.conf y verificar que tenga:
+xml<client>
+  <server>
+    <address>localhost</address>
+    <port>1516</port>
+    <protocol>tcp</protocol>
+  </server>
+</client>
+# Paso 4 — Registrar el agente en el manager
+bashdocker exec wazuh-manager bash -c "touch /var/ossec/etc/client.keys && chmod 640 /var/ossec/etc/client.keys && chown root:wazuh /var/ossec/etc/client.keys"
+docker exec -it wazuh-manager /var/ossec/bin/manage_agents -a "any" -n "nombre-equipo"
+docker exec -it wazuh-manager /var/ossec/bin/manage_agents -e 001
+Copiar la clave que aparece e importarla en Windows:
+powershell& "C:\Program Files (x86)\ossec-agent\manage_agents.exe" -i "CLAVE_AQUI"
+# Paso 5 — Crear grupo default y reiniciar
+bashdocker exec wazuh-manager bash -c "mkdir -p /var/ossec/etc/shared/default && chown -R wazuh:wazuh /var/ossec/etc/shared/default && echo '<agent_config></agent_config>' > /var/ossec/etc/shared/default/agent.conf && chown wazuh:wazuh /var/ossec/etc/shared/default/agent.conf"
+docker restart wazuh-manager
+# Paso 6 — Iniciar el servicio del agente
+powershellNET START WazuhSvc
+# Paso 7 — Verificar que el agente está activo
+bashdocker exec wazuh-manager /var/ossec/bin/agent_control -l
+Resultado esperado:
+ID: 000, Name: wazuh-manager (server), IP: 127.0.0.1, Active/Local
+ID: 001, Name: nombre-equipo, IP: any, Active
+Integración con n8n (subworkflow Wazuh)
+El workflow principal workflow_fase-3_FINAL envía alertas enriquecidas al subworkflow subworkflow_wazuh_monitor via webhook en http://localhost:5678/webhook/wazuh-monitor.
+Importar los workflows en n8n
+
+Importar primero subworkflow_wazuh_monitor_v3.json
+Importar después workflow_fase-3_final.json
+En el subworkflow, configurar las credenciales Wazuh API (Basic Auth):
+
+Usuario: wazuh-wui
+Contraseña: MyS3cr37P450r
+
+
+Activar ambos workflows
+
+Flujo de datos con Wazuh
+
+n8n detecta amenaza en logs → enriquece con Threat Intel
+Workflow principal llama al subworkflow via webhook
+Subworkflow obtiene token JWT de la API de Wazuh
+Envía el evento a http://wazuh-manager:55000/events
+Envía también a Logstash para trazabilidad en ELK
+El evento aparece en el dashboard de Wazuh → Security → Events
+
+Verificar que Wazuh recibe eventos
+bashdocker exec wazuh-manager tail -20 /var/ossec/logs/ossec.log
+Verificaciones de estado
+bash# Agentes conectados
+docker exec wazuh-manager /var/ossec/bin/agent_control -l
+
+# Log del plugin dashboard
+docker exec wazuh-dashboard cat /usr/share/wazuh-dashboard/data/wazuh/logs/wazuhapp.log | tail -10
+
+# Log del manager
+docker exec wazuh-manager tail -20 /var/ossec/logs/ossec.log
+Resultados obtenidos
+
+Wazuh Manager, Indexer y Dashboard operativos e integrados al stack
+Agente Windows registrado y activo (ID: 001)
+Plugin dashboard conectado al manager via nombre DNS Docker
+Eventos de seguridad generados por n8n visibles en Wazuh → Security
+Subworkflow n8n enviando alertas a Wazuh via JWT
+
+# Fuentes de información
+
+Documentación oficial Wazuh 4.7: https://documentation.wazuh.com/4.7/
+Wazuh Docker deployment: https://documentation.wazuh.com/4.7/deployment-options/docker/docker-installation.html
+Wazuh API reference: https://documentation.wazuh.com/4.7/user-manual/api/reference.html
