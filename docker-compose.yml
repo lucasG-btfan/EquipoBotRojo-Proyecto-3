@@ -1,12 +1,10 @@
 version: '3.8'
 
+
 services:
   syslog-ng:
     image: balabit/syslog-ng:latest
     container_name: syslog-ng
-    cap_add:
-      - NET_ADMIN
-      - NET_RAW
     ports:
       - "514:514/udp"
       - "601:601/tcp"
@@ -16,6 +14,10 @@ services:
       - ./config/syslog-ng.conf:/etc/syslog-ng/syslog-ng.conf
       - ./logs:/var/log
     restart: always
+    networks:
+      - security-network
+      - wazuh-network
+
 
   postgres:
     image: postgres:15
@@ -36,6 +38,9 @@ services:
       retries: 5
       start_period: 30s
     restart: unless-stopped
+    networks:
+      - security-network
+
 
   pgadmin:
     image: dpage/pgadmin4
@@ -48,6 +53,9 @@ services:
     depends_on:
       - postgres
     restart: unless-stopped
+    networks:
+      - security-network
+
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
@@ -56,18 +64,21 @@ services:
       - discovery.type=single-node
       - ES_JAVA_OPTS=-Xms1g -Xmx1g
       - xpack.security.enabled=false
-      - xpack.security.enrollment.enabled=false  
+      - xpack.security.enrollment.enabled=false
     ports:
       - "9200:9200"
       - "9300:9300"
     volumes:
       - ./elastic_data:/usr/share/elasticsearch/data
     restart: always
+    networks:
+      - security-network
+
 
   fail2ban:
     image: crazymax/fail2ban:latest
     container_name: fail2ban
-    network_mode: "host"  
+    network_mode: "host"
     cap_add:
       - NET_ADMIN
       - NET_RAW
@@ -79,16 +90,20 @@ services:
       - fail2ban_db:/data
     restart: unless-stopped
 
+
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
-    ports: 
+    ports:
      - "9090:9090"
     restart: unless-stopped
-    
+    networks:
+      - security-network
+
+
   alertmanager:
     image: prom/alertmanager:latest
     container_name: alertmanager
@@ -97,20 +112,24 @@ services:
     ports:
       - "9093:9093"
     restart: unless-stopped
-  
+    networks:
+      - security-network
+
+
   fail2ban-exporter:
     build:
       context: .
       dockerfile: Dockerfile.exporter
     container_name: fail2ban-exporter
-    user: root  
+    user: root
     ports:
       - "9121:9121"
     volumes:
       - fail2ban_db:/data:ro
     restart: unless-stopped
     networks:
-      - default
+      - security-network
+
 
   kibana:
     image: docker.elastic.co/kibana/kibana:8.13.0
@@ -122,6 +141,9 @@ services:
     depends_on:
       - elasticsearch
     restart: unless-stopped
+    networks:
+      - security-network
+
 
   logstash:
     image: docker.elastic.co/logstash/logstash:8.13.0
@@ -129,11 +151,12 @@ services:
     volumes:
       - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
       - ./logs:/var/log/security:ro
-      - ./logstash/geoip:/usr/share/geoip:ro  
+      - ./logstash/geoip:/usr/share/geoip:ro
     ports:
       - "8080:8080"
+      - "8081:8081"
     environment:
-      - LS_JAVA_OPTS=-Xmx1g -Xms1g  
+      - LS_JAVA_OPTS=-Xmx1g -Xms1g
       - XPACK_MONITORING_ENABLED=false
       - LS_HTTP_MAX_CONTENT_LENGTH=100mb
       - LS_HTTP_MAX_PENDING_REQUESTS=50
@@ -146,6 +169,9 @@ services:
     depends_on:
       - elasticsearch
     restart: unless-stopped
+    networks:
+      - security-network
+
 
   n8n:
     image: n8nio/n8n:latest
@@ -167,15 +193,115 @@ services:
       - DB_POSTGRESDB_USER=db_user
       - DB_POSTGRESDB_PASSWORD=db_pass
       - N8N_DIAGNOSTICS_ENABLED=false
+      - N8N_USER_FOLDER=/root/.n8n-files
     volumes:
       - ./n8n_config:/home/node/.n8n
       - ./logs:/home/node/logs
+      - ./logs:/root/.n8n-files/security:rw
+      - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       - postgres
     restart: unless-stopped
+    networks:
+      - security-network
+      - wazuh-network
+
+
+  wazuh-indexer:
+    image: wazuh/wazuh-indexer:4.7.2
+    container_name: wazuh-indexer
+    hostname: wazuh-indexer
+    restart: always
+    ports:
+      - "9201:9200"
+      - "9301:9300"
+    environment:
+      - node.name=wazuh-indexer
+      - cluster.name=wazuh-cluster
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g"
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=Admin1234!
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - wazuh-indexer-data:/var/lib/wazuh-indexer
+      - ./wazuh/indexer/opensearch.yml:/usr/share/wazuh-indexer/config/opensearch.yml
+    networks:
+      - wazuh-network
+      - security-network  
+  
+
+  wazuh-manager:
+    image: wazuh/wazuh-manager:4.7.2
+    container_name: wazuh-manager
+    hostname: wazuh-manager
+    restart: always
+    ports:
+      - "1516:1514/udp"
+      - "1516:1514/tcp"   
+      - "1515:1515/tcp"
+      - "55000:55000/tcp"
+    environment:
+      - INDEXER_URL=https://wazuh-indexer:9200   
+      - INDEXER_USERNAME=admin
+      - INDEXER_PASSWORD=Admin1234! 
+      - FILEBEAT_SSL_VERIFICATION_MODE=none
+    volumes:
+      - wazuh-manager-data:/var/ossec/data
+      - ./wazuh/manager/etc/ossec.conf:/var/ossec/etc/ossec.conf
+      - ./wazuh/manager/etc/rules/local_rules.xml:/var/ossec/etc/rules/local_rules.xml
+      - ./wazuh/manager/etc/shared:/var/ossec/etc/shared
+      - ./wazuh/manager/etc/api.yaml:/var/ossec/api/configuration/api.yaml  
+      - ./wazuh/manager/etc/security:/var/ossec/api/configuration/security  
+      - ./logs:/host_logs:ro
+      - ./wazuh/manager/etc/filebeat.yml:/var/ossec/etc/filebeat.yml
+      - ./wazuh/manager/etc/client.keys:/var/ossec/etc/client.keys
+    networks:
+      - wazuh-network
+    depends_on:
+      - wazuh-indexer
+
+  wazuh-dashboard:
+    image: wazuh/wazuh-dashboard:4.7.2
+    container_name: wazuh-dashboard
+    hostname: wazuh-dashboard
+    restart: always
+    ports:
+      - "5602:5602"
+    environment:
+      - DASHBOARD_USERNAME=kibanaserver
+      - DASHBOARD_PASSWORD=kibanaserver
+    volumes:
+      - wazuh-dashboard-data:/usr/share/wazuh-dashboard/data
+      - ./wazuh/dashboard/opensearch_dashboards.yml:/usr/share/wazuh-dashboard/config/opensearch_dashboards.yml
+      - ./wazuh/dashboard/wazuh.yml:/usr/share/wazuh-dashboard/data/wazuh/config/wazuh.yml:ro
+    networks:
+      - wazuh-network
+    depends_on:
+      - wazuh-indexer
+
+
 
 volumes:
   postgres_data:
   n8n_data:
   fail2ban_data:
   fail2ban_db:
+  wazuh-indexer-data:
+  wazuh-manager-data:
+  wazuh-dashboard-data:
+
+
+networks:
+  security-network:
+    driver: bridge
+  wazuh-network:
+    driver: bridge
+
+
