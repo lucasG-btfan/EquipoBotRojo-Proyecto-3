@@ -1,0 +1,8 @@
+﻿network.host: 0.0.0.0
+http.port: 9200
+node.name: wazuh-indexer
+cluster.name: wazuh-cluster
+discovery.type: single-node
+plugins.security.disabled: false
+plugins.security.ssl.http.enabled: true
+plugins.security.ssl.transport.enabled: true

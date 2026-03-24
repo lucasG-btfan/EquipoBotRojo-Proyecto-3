@@ -1,0 +1,54 @@
+_meta:
+  type: "roles"
+  config_version: 2
+
+custom_kibana_role:
+  reserved: true
+  cluster_permissions:
+    - cluster_composite_ops
+    - cluster_monitor
+    - indices_monitor
+    - cluster:admin/opensearch/dashboards/notifications/*
+    - cluster:admin/opensearch/ism/*
+    - cluster:admin/ingest/pipeline/get
+    - cluster:admin/ingest/pipeline/put
+    - cluster:admin/opensearch/plugins/alerting/*
+    - cluster_monitor
+    - cluster:admin/opensearch/ad/*
+  index_permissions:
+    - index_patterns:
+        - "*"
+      allowed_actions:
+        - "read"
+        - "write"
+        - "delete"
+        - "manage"
+        - "index"
+        - "create_index"
+        - "manage_index_templates"
+        - "crud"
+        - "create"
+        - "indices:admin/mapping/put"
+        - "indices:admin/mapping/auto_put"
+        - "indices:data/write/index"
+        - "indices:data/write/bulk"
+        - "indices:data/write/update"
+        - "indices:monitor/settings/get"
+        - "indices:admin/settings/update"
+        - "indices:admin/aliases"
+        - "indices:admin/template/get"
+        - "indices:admin/template/put"
+        - "indices:admin/template/delete"
+        - "indices:admin/index_template/get"
+        - "indices:admin/index_template/put"
+        - "indices:admin/get"
+        - "indices:admin/create"
+        - "indices:admin/refresh"
+        - "indices:admin/flush"
+        - "indices:admin/forcemerge"
+  tenant_permissions:
+    - tenant_patterns:
+        - "global_tenant"
+      allowed_actions:
+        - "kibana_all_read"
+        - "kibana_all_write"

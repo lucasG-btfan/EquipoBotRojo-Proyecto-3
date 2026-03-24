@@ -1,0 +1,10 @@
+_meta:
+  type: "rolesmapping"
+  config_version: 2
+
+custom_kibana_role:
+  reserved: true
+  users:
+    - "kibanaserver"
+  backend_roles:
+    - "kibanaserver"
