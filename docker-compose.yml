@@ -28,7 +28,7 @@ services:
       POSTGRES_PASSWORD: db_pass
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./bd/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      - ./bd:/docker-entrypoint-initdb.d
     ports:
       - "5432:5432"
     healthcheck:
@@ -197,7 +197,7 @@ services:
     volumes:
       - ./n8n_config:/home/node/.n8n
       - ./logs:/home/node/logs
-      - ./logs:/root/.n8n-files/security:rw
+      - ./logs:/root/.n8n-files:rw
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       - postgres
