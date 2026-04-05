@@ -10,10 +10,10 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1.1,
       "position": [
-        -704,
+        -1616,
         80
       ],
-      "id": "85188dfd-35c8-45e5-8ef6-86043a65fa62",
+      "id": "d67120db-106c-46e9-bb20-4a9961e534b7",
       "name": "Webhook Tickets",
       "webhookId": "ticket-webhook"
     },
@@ -24,10 +24,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        448,
+        -464,
         48
       ],
-      "id": "b05a66dc-4d50-452d-83b2-4a0761611caa",
+      "id": "71464a8d-b318-4235-b825-c757002c37a0",
       "name": "Generar Ticket"
     },
     {
@@ -195,42 +195,15 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        736,
+        -176,
         80
       ],
-      "id": "7f8bdf66-15de-4a6f-8b71-1877fe509a4b",
+      "id": "83eda06d-da68-4f13-b608-0ccf7f800a89",
       "name": "Insertar Ticket en BD",
       "credentials": {
         "postgres": {
-          "id": "5oNla0FyawiUWphG",
+          "id": "fxbYllSjTFqyrT5U",
           "name": "Postgres account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "select": "channel",
-        "channelId": {
-          "__rl": true,
-          "value": "#nuevo-canal",
-          "mode": "name"
-        },
-        "text": "={{ \n`Nuevo ticket: *${$json.ticket_number}* - ${$json.title}\\n` +\n`Prioridad: ${$json.priority} | Categoría: ${$json.category}\\n` +\n`IP: ${$json.source_ip} | Score: ${$json.threat_score}\\n` +\n`Asignado: ${$json.assigned_to}` \n}}",
-        "otherOptions": {}
-      },
-      "type": "n8n-nodes-base.slack",
-      "typeVersion": 2,
-      "position": [
-        944,
-        176
-      ],
-      "id": "98c59543-bbd1-4d2a-80be-fbbff152abcd",
-      "name": "Notificar en Slack",
-      "webhookId": "51d64ca6-4c2d-4070-b54a-290e312e31c9",
-      "credentials": {
-        "slackApi": {
-          "id": "gUEgU3Z0dFrsEYob",
-          "name": "Slack account"
         }
       }
     },
@@ -241,10 +214,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1152,
-        80
+        432,
+        176
       ],
-      "id": "e502fbd5-d093-4f90-ab97-98ad16b201e4",
+      "id": "3246733b-0cdc-4a3a-980c-eeadf72b17b0",
       "name": "Finalizar Proceso"
     },
     {
@@ -259,15 +232,15 @@
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [
-        912,
+        16,
         0
       ],
-      "id": "8618e42e-a5e0-4160-88d2-87aaa4146f02",
+      "id": "ef6f385d-65c0-4715-8a94-8f0de35bb664",
       "name": "Send email",
       "webhookId": "6b0a7bc7-0e9d-4669-ab6f-da7b843ae9ec",
       "credentials": {
         "smtp": {
-          "id": "adlWUgRnoj7ZoL1U",
+          "id": "SXAVnICwMTpNLbPk",
           "name": "SMTP account"
         }
       }
@@ -279,10 +252,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        224,
-        240
+        -608,
+        224
       ],
-      "id": "bb5ea72a-6b6b-4d42-9863-cee9bb190611",
+      "id": "7f5f7186-c43c-43bc-b5b4-8245ce16bdc6",
       "name": "Code in JavaScript"
     },
     {
@@ -340,10 +313,10 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.3,
       "position": [
-        -160,
+        -1072,
         96
       ],
-      "id": "7b2d26ac-1d39-46df-8499-fed881a2b6a4",
+      "id": "67c81a94-e15c-4ebc-9b14-aaa8809abad1",
       "name": "Switch"
     },
     {
@@ -353,10 +326,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -496,
+        -1408,
         80
       ],
-      "id": "bc62db70-51d4-49bf-b363-5248606c4b49",
+      "id": "4768a3c7-4ec0-41b1-a1fe-3054935858fa",
       "name": "Code in JavaScript1"
     },
     {
@@ -367,11 +340,80 @@
       "type": "n8n-nodes-base.splitOut",
       "typeVersion": 1,
       "position": [
-        48,
+        -864,
         192
       ],
-      "id": "c56be77e-9db6-4a13-8ab6-0b705617da04",
+      "id": "ac3c98cb-e818-4738-a202-b87dc3870203",
       "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "chatId": "-1003838665607",
+        "text": "=🚨 *NUEVO TICKET GENERADO* 🚨\n\n📌 *Prioridad:* {{ $json.priority }}\n📂 *Categoría:* {{ $json.category }}\n🌐 *IP:* {{ $json.source_ip }}\n📊 *Score:* {{ $json.threat_score }}\n👤 *Asignado:* {{ $json.assigned_to }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        16,
+        192
+      ],
+      "id": "f8e5ded2-bc74-406e-8ab0-b2ad7776e379",
+      "name": "Send a text message",
+      "webhookId": "5e9f30f9-c258-43fe-b7e8-f5f266745e99",
+      "credentials": {
+        "telegramApi": {
+          "id": "W1iVfTTyzWU5Idv0",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "-1003838665607",
+        "text": "=✅ ACCIÓN DE SEGURIDAD COMPLETADA Ticket: {{ $json.ticket_number }} Resultado: El baneo en el jail {{ $json.title }} ha sido verificado por Prometheus. Estado: Protegido.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -144,
+        416
+      ],
+      "id": "f57382ea-1f31-4116-8094-811994530251",
+      "name": "Send a text message1",
+      "webhookId": "63cd58c6-cae5-496b-a906-c552c8bd4892",
+      "credentials": {
+        "telegramApi": {
+          "id": "W1iVfTTyzWU5Idv0",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "rafa.legendsss@gmail.com",
+        "toEmail": "rafa.legendsss@gmail.com",
+        "subject": "Generar alertas",
+        "emailFormat": "text",
+        "text": "=Alerta de Seguridad - Nuevo Ticket Detectado ID: {{ $json.id }} IP Maliciosa: {{ $json.source_ip }} Riesgo: {{ $json.risk_score }} Categoría: {{ $json.category }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        -160,
+        288
+      ],
+      "id": "ef5e483c-7f23-459c-9630-9fd124acd7b2",
+      "name": "Send email1",
+      "webhookId": "206cd72e-9fa3-4777-96ac-96de3685a426",
+      "credentials": {
+        "smtp": {
+          "id": "SXAVnICwMTpNLbPk",
+          "name": "SMTP account"
+        }
+      }
     }
   ],
   "pinData": {},
@@ -402,23 +444,12 @@
       "main": [
         [
           {
-            "node": "Notificar en Slack",
+            "node": "Send email",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Send email",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Notificar en Slack": {
-      "main": [
-        [
-          {
-            "node": "Finalizar Proceso",
+            "node": "Send a text message",
             "type": "main",
             "index": 0
           }
@@ -427,20 +458,19 @@
     },
     "Send email": {
       "main": [
-        [
-          {
-            "node": "Finalizar Proceso",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        []
       ]
     },
     "Code in JavaScript": {
       "main": [
         [
           {
-            "node": "Insertar Ticket en BD",
+            "node": "Send email1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a text message1",
             "type": "main",
             "index": 0
           }
@@ -486,17 +516,44 @@
           }
         ]
       ]
+    },
+    "Send a text message": {
+      "main": [
+        [
+          {
+            "node": "Finalizar Proceso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send email1": {
+      "main": [
+        []
+      ]
+    },
+    "Send a text message1": {
+      "main": [
+        [
+          {
+            "node": "Finalizar Proceso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "d2767f38-80b6-4a4d-97f9-23aa4a8efb5c",
+  "versionId": "96199a2f-6f17-4f9f-8e13-33f4e9696a8d",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "8c36b1fcd5715c1d5c4dc72cf4a61bd3613a8fd6b8532a31460a88ccdd2cd369"
+    "instanceId": "7478c350e39689cddadf155b6c5aead67e0635cfe1aa4e6d60c18ecb354db193"
   },
-  "id": "j6Qn64ARNQ2dKSwQ",
+  "id": "B0ZXhvCLkdwUOVKj",
   "tags": []
 }

@@ -10,10 +10,10 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1.1,
       "position": [
-        -592,
-        144
+        -832,
+        368
       ],
-      "id": "dcce36c6-131d-47e4-b349-4945ee18a598",
+      "id": "9211ccfb-554b-4bc3-9e84-f6bef4963718",
       "name": "Webhook",
       "webhookId": "auto-block-webhook"
     },
@@ -28,14 +28,14 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        -32,
-        32
+        -272,
+        256
       ],
-      "id": "e028ceb5-94a3-4dd5-9050-d6fc2d1f2f19",
+      "id": "e2905266-4081-4380-86e5-52975c058fff",
       "name": "Insertar IP Bloqueada",
       "credentials": {
         "postgres": {
-          "id": "5oNla0FyawiUWphG",
+          "id": "fxbYllSjTFqyrT5U",
           "name": "Postgres account"
         }
       }
@@ -47,10 +47,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -416,
-        144
+        -656,
+        368
       ],
-      "id": "16b210b5-1e05-492f-b2bd-d914c5f1b921",
+      "id": "f8d6c96d-e523-4a9f-a9fe-5d0c1d57ec14",
       "name": "Lógica de Decisión"
     },
     {
@@ -60,10 +60,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        240,
-        -224
+        0,
+        0
       ],
-      "id": "7e923e2a-d4c4-4f23-8345-bdc18e1bab58",
+      "id": "56b4791d-6cd9-4b74-a0da-3e724b77a286",
       "name": "Acción Firewall"
     },
     {
@@ -93,36 +93,36 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.1,
       "position": [
-        -272,
-        144
+        -512,
+        368
       ],
-      "id": "def59021-f743-42cf-b150-d91546690247",
+      "id": "01e1c873-71c1-4f93-ad88-d1e2189616b5",
       "name": "¿Bloquear?"
     },
     {
       "parameters": {
-        "jsCode": "const result = $input.first().json;\n\nconst report = {\n  timestamp: new Date().toISOString(),\n  action: 'ip_blocking',\n  status: result.block_decision === 'block' ? 'blocked' : 'not_blocked',\n  details: {\n    ip: result.source_ip,\n    threat_score: result.threat_score,\n    severity: result.severity,\n    reason: result.reason,\n    blocked_until: result.blocked_until,\n    firewall_executed: result.firewall_executed || false\n  },\n  workflow: 'auto_blocking_v1'\n};\n\nconsole.log('Reporte de bloqueo:', JSON.stringify(report, null, 2));\n\nif (result.block_decision === 'block') {\n  try {\n    await $http.post({\n      url: 'http://logstash:8081',\n      body: {\n        ...report,\n        type: 'ip_block_event',\n        source: 'n8n_auto_block'\n      },\n      headers: { 'Content-Type': 'application/json' }\n    });\n  } catch (error) {\n    console.log('Error enviando a Logstash:', error.message);\n  }\n}\n\nreturn [{ json: report }];"
+        "jsCode": "const result = $input.first().json;\n\nconst report = {\n  timestamp: new Date().toISOString(),\n  action: 'ip_blocking',\n  status: result.block_decision === 'block' ? 'blocked' : 'not_blocked',\n  details: {\n    ip: result.source_ip,\n    threat_score: result.threat_score,\n    severity: result.severity,\n    reason: result.reason,\n    blocked_until: result.blocked_until,\n    firewall_executed: result.firewall_executed || false\n  },\n  workflow: 'auto_blocking_v1'\n};\n\nconsole.log('Reporte de bloqueo:', JSON.stringify(report, null, 2));\n\nif (result.block_decision === 'block') {\n  try {\n    await $http.post({\n      url: 'http://logstash:8080',\n      body: {\n        ...report,\n        type: 'ip_block_event',\n        source: 'n8n_auto_block'\n      },\n      headers: { 'Content-Type': 'application/json' }\n    });\n  } catch (error) {\n    console.log('Error enviando a Logstash:', error.message);\n  }\n}\n\nreturn [{ json: report }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        432,
-        160
+        192,
+        384
       ],
-      "id": "e3d64764-68ff-43b0-82d0-a60cb8978804",
+      "id": "3752db2b-9aba-451d-9deb-f8e72a6835bf",
       "name": "Generar Reporte"
     },
     {
       "parameters": {
-        "command": "=echo \"$(date) [ALERTA SEGURIDAD] BLOQUEAR IP: {{ $('¿Bloquear?').item.json.source_ip }}\" >> /home/node/logs/security/alerts.log"
+        "command": "=echo \"$(date) [ALERTA SEGURIDAD] BLOQUEAR IP: {{ $('¿Bloquear?').item.json.source_ip }}\" >> /home/node/logs/security/fail2ban.log"
       },
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        160,
-        32
+        -80,
+        256
       ],
-      "id": "27ed080b-c018-4669-a87e-9b4d881d8477",
+      "id": "4296c380-8b43-49b5-beda-4239e1cac0eb",
       "name": "Execute Command"
     }
   ],
@@ -179,11 +179,6 @@
         ]
       ]
     },
-    "Acción Firewall": {
-      "main": [
-        []
-      ]
-    },
     "Execute Command": {
       "main": [
         [
@@ -200,11 +195,11 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "0bf3380f-4df6-44f6-bb3d-0a613b912c79",
+  "versionId": "da1d4295-df3a-42e4-bcb3-5801ad80a41d",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "a1fd4d034e4eac24a6f649d98a597f7cee9e24e6d68c40d66d66e249020ea36b"
+    "instanceId": "7478c350e39689cddadf155b6c5aead67e0635cfe1aa4e6d60c18ecb354db193"
   },
-  "id": "clc2L6MJWypmwASu",
+  "id": "mk0m9Wef9tFWpqL4",
   "tags": []
 }
