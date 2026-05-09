@@ -1,0 +1,230 @@
+{
+  "name": "Metricas Prometheus",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -224,
+        -64
+      ],
+      "id": "9c7601b0-823a-4de8-baa9-af40b4af0d1a",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "http://prometheus:9090/api/v1/query?query=fail2ban_banned_ips",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -32,
+        -144
+      ],
+      "id": "63869403-d691-4cee-bf81-b20f3be9de15",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "url": "http://prometheus:9090/api/v1/query?query=fail2ban_up",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -32,
+        0
+      ],
+      "id": "4ead6584-5cdf-474d-9cf8-0f8c7f8392cf",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst results = [];\n\nitems.forEach(item => {\n  const data = item.json.data?.result || [];\n  data.forEach(metric => {\n    results.push({\n      json: {\n        hostname: metric.metric?.instance || 'docker-host',\n        metric_name: metric.metric?.__name__ || 'unknown',\n        metric_value: parseFloat(metric.value?.[1] || 0),\n        unit: metric.metric?.__name__?.includes('bytes') ? 'bytes' : 'count'\n      }\n    });\n  });\n});\n\nreturn results.length > 0 ? results : [{ json: { skip: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        -96
+      ],
+      "id": "460effa9-ffe9-4a1e-bf0b-0438301f59b0",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "system_metrics",
+          "mode": "list",
+          "cachedResultName": "system_metrics"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "metric_value": "={{ $json.metric_value }}",
+            "hostname": "={{ $json.hostname }}",
+            "metric_name": "={{ $json.metric_name }}",
+            "unit": "={{ $json.unit }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "hostname",
+              "displayName": "hostname",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "metric_name",
+              "displayName": "metric_name",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "metric_value",
+              "displayName": "metric_value",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "unit",
+              "displayName": "unit",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        416,
+        -96
+      ],
+      "id": "b8054a9d-1eaf-46cc-9b95-45ac7bad4f08",
+      "name": "Insert rows in a table",
+      "credentials": {
+        "postgres": {
+          "id": "fxbYllSjTFqyrT5U",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Insert rows in a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "0f46a09c-d6f4-40eb-a983-c7a6cf2ff0c2",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7478c350e39689cddadf155b6c5aead67e0635cfe1aa4e6d60c18ecb354db193"
+  },
+  "id": "S8KYnwHGovQ9pc7G",
+  "tags": []
+}

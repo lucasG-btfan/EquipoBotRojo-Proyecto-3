@@ -209,8 +209,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        608,
-        0
+        400,
+        16
       ],
       "id": "1548fad9-57f6-4918-acd6-d29bfa269c72",
       "name": "Nodo 9: Resumen"
@@ -548,7 +548,7 @@
     },
     {
       "parameters": {
-        "numberInputs": 4
+        "numberInputs": 5
       },
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
@@ -558,6 +558,27 @@
       ],
       "id": "2bc5aba4-972a-4881-a39e-62ab8ef507e5",
       "name": "Merge"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO attack_patterns (pattern_type, source_ip, target_host, first_seen, last_seen, occurrence_count, is_blocked)\nVALUES (\n  '{{ $json.rule_name }}',\n  '{{ $json.source_ip }}',\n  '{{ $json.target_host }}',\n  NOW(),\n  NOW(),\n  1,\n  {{ $json.risk_level === 'CRITICAL' || $json.risk_level === 'HIGH' }}\n)\nON CONFLICT (source_ip, pattern_type) \nDO UPDATE SET \n  last_seen = NOW(),\n  occurrence_count = attack_patterns.occurrence_count + 1,\n  is_blocked = EXCLUDED.is_blocked;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        256,
+        -192
+      ],
+      "id": "5df76772-ccc5-4c10-9957-d25c5bf3db67",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "fxbYllSjTFqyrT5U",
+          "name": "Postgres account"
+        }
+      }
     }
   ],
   "pinData": {},
@@ -644,6 +665,11 @@
           },
           {
             "node": "Bloquear IP maliciosa",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Execute a SQL query",
             "type": "main",
             "index": 0
           }
@@ -764,13 +790,24 @@
           }
         ]
       ]
+    },
+    "Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 4
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "f2ce8344-3d4d-4006-a98a-4ec7be4d59c1",
+  "versionId": "91ac736f-8bac-4b66-a0ab-840a5b4894aa",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "7478c350e39689cddadf155b6c5aead67e0635cfe1aa4e6d60c18ecb354db193"

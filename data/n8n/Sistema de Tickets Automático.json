@@ -247,7 +247,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const alert = $json; \n\nreturn {\n    json: {\n        ticket_number: 'TICKET-METRICA-' + Math.random().toString(36).substr(2, 6).toUpperCase(),\n        title: `[ALERTA] Incremento de baneo en Jail: ${alert.labels?.jail || 'n8n'}`,\n        description: \"Prometheus detectó un cambio en el contador. La IP detallada debe estar en el ticket anterior de Logs.\",\n        status: 'closed',\n        priority: 'medium',\n        category: 'IPS/Metrics',\n        source_ip: 'Ver Logstash', // Ya no ponemos \"Desconocida\", sino una indicación clara\n        threat_score: 100,\n        assigned_to: 'security_team@example.com',\n        created_at: new Date().toISOString()\n    }\n};"
+        "jsCode": "const alert = $json;\nconst alertname = alert.commonLabels?.alertname || alert.groupLabels?.alertname || 'Unknown';\n\nconst mensajes = {\n  'IpBaneadaDetectada': {\n    title: `[BANEO] IPs baneadas en Jail: ${alert.commonLabels?.jail || 'n8n-auth-jail'}`,\n    description: `Prometheus detectó IPs baneadas. Revisar tickets de logs para detalles.`,\n    priority: 'medium'\n  },\n  'Fail2banCaido': {\n    title: `[CRÍTICO] Fail2ban está caído`,\n    description: `El servicio fail2ban no responde. El sistema de bloqueo automático está inactivo.`,\n    priority: 'critical'\n  },\n  'AtaqueMasivo': {\n    title: `[ATAQUE MASIVO] Más de 10 IPs baneadas simultáneamente`,\n    description: `Prometheus detectó un volumen anormal de baneos. Posible ataque coordinado.`,\n    priority: 'critical'\n  }\n};\n\nconst info = mensajes[alertname] || {\n  title: `[ALERTA] ${alertname}`,\n  description: `Alerta de Prometheus: ${alertname}`,\n  priority: 'medium'\n};\n\nreturn {\n  json: {\n    ticket_number: 'TICKET-METRICA-' + Math.random().toString(36).substr(2, 6).toUpperCase(),\n    title: info.title,\n    description: info.description,\n    status: 'open',\n    priority: info.priority,\n    category: 'IPS/Metrics',\n    source_ip: 'Prometheus',\n    threat_score: info.priority === 'critical' ? 100 : 50,\n    assigned_to: 'security_team@example.com',\n    created_at: new Date().toISOString()\n  }\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -371,7 +371,7 @@
     {
       "parameters": {
         "chatId": "-1003838665607",
-        "text": "=✅ ACCIÓN DE SEGURIDAD COMPLETADA Ticket: {{ $json.ticket_number }} Resultado: El baneo en el jail {{ $json.title }} ha sido verificado por Prometheus. Estado: Protegido.",
+        "text": "=✅ ALERTA DE PROMETHEUS\nTicket: {{ $json.ticket_number }}\nTipo: {{ $json.title }}\nDescripción: {{ $json.description }}\nPrioridad: {{ $json.priority }}\nEstado: {{ $json.status }}",
         "additionalFields": {}
       },
       "type": "n8n-nodes-base.telegram",
@@ -396,7 +396,7 @@
         "toEmail": "rafa.legendsss@gmail.com",
         "subject": "Generar alertas",
         "emailFormat": "text",
-        "text": "=Alerta de Seguridad - Nuevo Ticket Detectado ID: {{ $json.id }} IP Maliciosa: {{ $json.source_ip }} Riesgo: {{ $json.risk_score }} Categoría: {{ $json.category }}",
+        "text": "=✅ ALERTA DE PROMETHEUS\nTicket: {{ $json.ticket_number }}\nTipo: {{ $json.title }}\nDescripción: {{ $json.description }}\nPrioridad: {{ $json.priority }}\nEstado: {{ $json.status }}",
         "options": {}
       },
       "type": "n8n-nodes-base.emailSend",
@@ -549,7 +549,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "96199a2f-6f17-4f9f-8e13-33f4e9696a8d",
+  "versionId": "917ac0b3-accd-4534-bce2-c13d9e6540cf",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "7478c350e39689cddadf155b6c5aead67e0635cfe1aa4e6d60c18ecb354db193"
