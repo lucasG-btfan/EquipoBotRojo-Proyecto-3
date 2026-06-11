@@ -19,7 +19,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json.datos_originales || $input.first().json;\n\n// 1. Extraer la IP atacante\nconst sourceIp = input.source_ip || \"0.0.0.0\";\n\n// 2. Sincronizar Prioridad con el Score (70 = HIGH)\nconst score = input.risk_score || 0;\nconst finalPriority = score >= 80 ? 'critical' : score >= 60 ? 'high' : 'medium';\n\nreturn [{\n    json: {\n        ticket_number: 'TICKET-LOG-' + Math.random().toString(36).substr(2, 6).toUpperCase(),\n        title: `[DETECCIÓN] ${input.rule_name || \"Ataque SSH\"}`,\n        description: `Fallo de login detectado desde ${sourceIp}`,\n        status: 'open',\n        priority: finalPriority, // <--- Ahora dirá HIGH si el score es 70\n        category: 'HIDS/Logs',\n        source_ip: sourceIp,\n        threat_score: score,\n        assigned_to: 'security_team@example.com',\n        created_at: new Date().toISOString(),\n        // 3. RELLENAR ALERT_REFERENCE (para que no salga null)\n        alert_reference: input.threat_intel || { info: \"No intel data\" }\n    }\n}];"
+        "jsCode": "const input = $input.first().json.datos_originales || $input.first().json;\n\n// 1. Extraer la IP atacante\nconst sourceIp = input.source_ip || \"0.0.0.0\";\n\n// 2. Sincronizar Prioridad con el Score (70 = HIGH)\nconst score = input.risk_score || 0;\nconst finalPriority = score >= 80 ? 'critical' : score >= 60 ? 'high' : 'medium';\n\nreturn [{\n    json: {\n        ticket_number: 'TICKET-LOG-' + Math.random().toString(36).substr(2, 6).toUpperCase(),\n        title: `[DETECCIÓN] ${input.rule_name || \"Ataque SSH\"}`,\n        description: `Fallo de login detectado desde ${sourceIp}`,\n        status: 'open',\n        priority: $('Code in JavaScript1').first().json.datos_originales.severity,\n        category: `HIDS/Logs-${input.rule_name}`,\n        source_ip: sourceIp,\n        threat_score: score,\n        assigned_to: 'rafa.legendsss@gmail.com',\n        created_at: new Date().toISOString(),\n        // 3. RELLENAR ALERT_REFERENCE (para que no salga null)\n        alert_reference: input.threat_intel || { info: \"No intel data\" }\n    }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -209,7 +209,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const ticket = $input.first().json;\n\ntry {\n  await $http.post({\n    url: 'http://logstash:8081',\n    body: {\n      ...ticket,\n      type: 'ticket_created',\n      source: 'n8n_ticket_system',\n      timestamp: new Date().toISOString()\n    },\n    headers: { 'Content-Type': 'application/json' }\n  });\n} catch (error) {\n  console.log('Error enviando ticket a Logstash:', error.message);\n}\n\nconst response = {\n  success: true,\n  ticket_number: ticket.ticket_number,\n  message: `Ticket ${ticket.ticket_number} creado exitosamente`,\n  details: {\n    priority: ticket.priority,\n    category: ticket.category,\n    assigned_to: ticket.assigned_to,\n    timestamp: new Date().toISOString()\n  }\n};\n\nreturn [{ json: response }];"
+        "jsCode": "const ticket = $('Insertar Ticket en BD').first().json; \nconst originalRuleName = $('Code in JavaScript1').first().json.datos_originales.rule_name;\n\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: 'http://logstash:8080',\n    body: {\n      ...ticket,\n      rule_name: originalRuleName, // 🔥 ¡ACÁ TIENE QUE IR para que viaje a Kibana!\n      type: 'ticket_created',\n      source: 'n8n_ticket_system',\n      timestamp: new Date().toISOString()\n    },\n    json: true \n  });\n} catch (error) {\n  throw new Error('Error enviando ticket a Logstash: ' + error.message);\n}\n\nconst response = {\n  success: true,\n  ticket_number: ticket.ticket_number,\n  message: `Ticket ${ticket.ticket_number} creado exitosamente`,\n  details: {\n    priority: ticket.priority,\n    category: ticket.category,\n    rule_name: originalRuleName,\n    assigned_to: ticket.assigned_to,\n    timestamp: new Date().toISOString()\n  }\n};\n\nreturn [{ json: response }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -549,7 +549,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "917ac0b3-accd-4534-bce2-c13d9e6540cf",
+  "versionId": "7633d746-e7c6-4d92-b343-8d75e6954112",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "7478c350e39689cddadf155b6c5aead67e0635cfe1aa4e6d60c18ecb354db193"

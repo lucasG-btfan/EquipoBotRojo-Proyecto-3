@@ -476,7 +476,7 @@
         "url": "http://localhost:5678/webhook/create-ticket",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"rule_name\": \"{{ $json.rule_name }}\",\n  \"source_ip\": \"{{ $json.source_ip }}\",\n  \"risk_score\": {{ $json.risk_score }},\n  \"description\": \"{{ $json.description }}\",\n  \"threat_intel\": {{ JSON.stringify($json.threat_intel) }}\n}",
+        "jsonBody": "={\n  \"rule_name\": \"{{ $json.rule_name }}\",\n  \"source_ip\": \"{{ $json.source_ip }}\",\n  \"risk_score\": {{ $json.risk_score }},\n  \"description\": \"{{ $json.description }}\",\n  \"threat_intel\": {{ JSON.stringify($json.threat_intel) }},\n  \"severity\": \"{{ $json.severity }}\"\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -807,7 +807,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "91ac736f-8bac-4b66-a0ab-840a5b4894aa",
+  "versionId": "d71649f8-8f86-41b3-9ba3-9c9638e9c1f1",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "7478c350e39689cddadf155b6c5aead67e0635cfe1aa4e6d60c18ecb354db193"
