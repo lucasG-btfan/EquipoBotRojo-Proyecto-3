@@ -55,19 +55,6 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first().json;\n\nif (item.block_decision === 'block' && !item.is_private_ip) {\n  try {\n    const command = `iptables -A INPUT -s ${item.source_ip} -j DROP && iptables -A OUTPUT -d ${item.source_ip} -j DROP`;\n    \n    console.log(`[SIMULADO] Ejecutar: ${command}`);\n    \n    item.firewall_command = command;\n    item.firewall_executed = true;\n    \n  } catch (error) {\n    item.firewall_executed = false;\n    item.firewall_error = error.message;\n  }\n}\n\nreturn [{\n  json: item\n}];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        0,
-        0
-      ],
-      "id": "56b4791d-6cd9-4b74-a0da-3e724b77a286",
-      "name": "Acción Firewall"
-    },
-    {
-      "parameters": {
         "conditions": {
           "options": {
             "caseSensitive": true,
@@ -195,7 +182,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "da1d4295-df3a-42e4-bcb3-5801ad80a41d",
+  "versionId": "a1ad27fd-e9c8-4d02-a0ca-d1dcac769fad",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "7478c350e39689cddadf155b6c5aead67e0635cfe1aa4e6d60c18ecb354db193"

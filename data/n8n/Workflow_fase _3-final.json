@@ -35,7 +35,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const logs = $input.all();\nconst rules = [\n  { id: 1, name: 'SSH Failed Password', pattern: 'Failed password', severity: 'high', threshold: 1, description: 'Intento de acceso fallido SSH' },\n  { id: 2, name: 'Sudo Usage', pattern: 'sudo', severity: 'medium', threshold: 1, description: 'Uso de comando SUDO detectado' },\n  { id: 3, name: 'Iptables Drop', pattern: 'iptables.*DROP', severity: 'high', threshold: 1, description: 'Paquete bloqueado por Firewall' },\n  { id: 4, name: 'Root Login Attempt', pattern: 'Failed password for root', severity: 'critical', threshold: 1, description: '¡Intento crítico de acceso como ROOT!' },\n  { id: 5, name: 'Port Scan', pattern: 'DPT=', severity: 'medium', threshold: 3, description: 'Posible escaneo de puertos' },\n  { id: 6, name: 'Service Restart', pattern: 'Started', severity: 'info', threshold: 1, description: 'Servicio iniciado/reiniciado' },\n  { id: 7, name: 'Access Denied', pattern: 'Access denied', severity: 'high', threshold: 1, description: 'Acceso denegado a recurso crítico' },\n  { id: 8, name: 'Kernel Oops', pattern: 'Oops', severity: 'critical', threshold: 1, description: 'Error crítico del Kernel detectado' }\n];\n\nconst extractIP = (text) => {\n  const ipRegex = /\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b/;\n  const match = text.match(ipRegex);\n  return match ? match[0] : '127.0.0.1';\n};\n\nlet alerts = [];\n\n// Procesamos cada log de entrada individualmente\nlogs.forEach(item => {\n  const logRaw = item.json.raw;\n  const sourceIp = extractIP(logRaw);\n  \n  // Usamos un bucle for...of para poder usar 'break'\n  for (const rule of rules) {\n    const regex = new RegExp(rule.pattern, 'i');\n    if (regex.test(logRaw)) {\n      alerts.push({\n        json: {\n          rule_id: rule.id,\n          rule_name: rule.name,\n          severity: rule.severity,\n          category: (rule.severity === 'critical' || rule.severity === 'high') ? 'attack' : 'system',\n          source_ip: sourceIp,\n          target_host: 'server1',\n          description: rule.description,\n          raw_log: logRaw,\n          timestamp: new Date().toISOString()\n        }\n      });\n      // IMPORTANTE: Al encontrar la regla más específica, saltamos al siguiente log\n      break; \n    }\n  }\n});\n\nreturn alerts.length > 0 ? alerts : logs.map(l => ({\n  json: {\n    rule_name: 'Monitoring Active',\n    severity: 'info',\n    category: 'system',\n    description: 'Actividad de log estándar detectada',\n    source_ip: extractIP(l.json.raw || ''),\n    raw_log: l.json.raw\n  }\n}));"
+        "jsCode": "const logs = $input.all();\nconst rules = [\n  { id: 4, name: 'Root Login Attempt', pattern: 'Failed|authentication|root', severity: 'critical', threshold: 1, description: '¡Intento crítico de acceso como ROOT!' },\n  { id: 7, name: 'Access Denied', pattern: 'Access denied|denied|forbidden', severity: 'high', threshold: 1, description: 'Acceso denegado a recurso crítico' },\n  { id: 5, name: 'Port Scan', pattern: 'DPT=|scan|probe', severity: 'medium', threshold: 3, description: 'Posible escaneo de puertos' },\n  { id: 6, name: 'Service Restart', pattern: 'Started', severity: 'info', threshold: 1, description: 'Servicio iniciado/reiniciado' },\n  { id: 8, name: 'Kernel Oops', pattern: 'Oops', severity: 'critical', threshold: 1, description: 'Error crítico del Kernel detectado' },\n  { id: 1, name: 'SSH Failed Password', pattern: 'Failed password', severity: 'high', threshold: 1, description: 'Intento de acceso fallido SSH' },\n  { id: 2, name: 'Sudo Usage', pattern: 'sudo', severity: 'medium', threshold: 1, description: 'Uso de comando SUDO detectado' },\n  { id: 3, name: 'Iptables Drop', pattern: 'iptables.*DROP', severity: 'high', threshold: 1, description: 'Paquete bloqueado por Firewall' }\n];\n\nconst extractIP = (text) => {\n  const ipRegex = /\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b/;\n  const match = text.match(ipRegex);\n  return match ? match[0] : '127.0.0.1';\n};\n\nlet alerts = [];\n\n// Procesamos cada log de entrada individualmente\nlogs.forEach(item => {\n  const logRaw = item.json.raw;\n  const sourceIp = extractIP(logRaw);\n  \n  // Usamos un bucle for...of para poder usar 'break'\n  for (const rule of rules) {\n    const regex = new RegExp(rule.pattern, 'i');\n    if (regex.test(logRaw)) {\n      alerts.push({\n        json: {\n          rule_id: rule.id,\n          rule_name: rule.name,\n          severity: rule.severity,\n          category: (rule.severity === 'critical' || rule.severity === 'high') ? 'attack' : 'system',\n          source_ip: sourceIp,\n          target_host: 'server1',\n          description: rule.description,\n          raw_log: logRaw,\n          timestamp: new Date().toISOString()\n        }\n      });\n      // IMPORTANTE: Al encontrar la regla más específica, saltamos al siguiente log\n      break; \n    }\n  }\n});\n\nreturn alerts.length > 0 ? alerts : logs.map(l => ({\n  json: {\n    rule_name: 'Monitoring Active',\n    severity: 'info',\n    category: 'system',\n    description: 'Actividad de log estándar detectada',\n    source_ip: extractIP(l.json.raw || ''),\n    raw_log: l.json.raw\n  }\n}));"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -149,8 +149,8 @@
       "type": "n8n-nodes-base.filter",
       "typeVersion": 2.2,
       "position": [
-        -32,
-        32
+        -48,
+        -32
       ],
       "id": "b0128774-17f7-41c1-b5b2-f242a48fb7d7",
       "name": "Filter"
@@ -209,7 +209,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        400,
+        608,
         16
       ],
       "id": "1548fad9-57f6-4918-acd6-d29bfa269c72",
@@ -217,12 +217,12 @@
     },
     {
       "parameters": {
-        "command": "truncate -s 0 /root/.n8n-files/security/alerts"
+        "command": "truncate -s 0 /root/.n8n-files/security/alerts.log"
       },
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        1072,
+        1280,
         464
       ],
       "id": "cd7ef903-0f64-4e08-9520-b732ea81deb4",
@@ -244,7 +244,7 @@
     },
     {
       "parameters": {
-        "fileSelector": "/root/.n8n-files/security/alerts",
+        "fileSelector": "/root/.n8n-files/security/alerts.log",
         "options": {
           "dataPropertyName": "data"
         }
@@ -457,7 +457,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        208,
+        416,
         0
       ],
       "id": "1bbb361c-cd5e-44b6-8e19-cf9e871033d6",
@@ -482,7 +482,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        304,
+        512,
         192
       ],
       "id": "38de0180-f7af-419c-b3f7-e6579a3b9f8e",
@@ -522,7 +522,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        304,
+        336,
         400
       ],
       "id": "940a26ec-8f2c-4c6c-afbc-3b8615da0186",
@@ -553,7 +553,7 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        752,
+        960,
         320
       ],
       "id": "2bc5aba4-972a-4881-a39e-62ab8ef507e5",
@@ -568,7 +568,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        256,
+        464,
         -192
       ],
       "id": "5df76772-ccc5-4c10-9957-d25c5bf3db67",
@@ -579,6 +579,39 @@
           "name": "Postgres account"
         }
       }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "98293be9-ab22-49ce-87fd-82f3d95f1339",
+              "leftValue": "={{ $json.risk_score }}",
+              "rightValue": 70,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        288,
+        128
+      ],
+      "id": "80035ea6-081d-44d8-a6e0-313ef2e4d3eb",
+      "name": "Filtro de risk_score para tickets"
     }
   ],
   "pinData": {},
@@ -659,17 +692,17 @@
             "index": 0
           },
           {
-            "node": "Crear ticket",
-            "type": "main",
-            "index": 0
-          },
-          {
             "node": "Bloquear IP maliciosa",
             "type": "main",
             "index": 0
           },
           {
             "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Filtro de risk_score para tickets",
             "type": "main",
             "index": 0
           }
@@ -801,13 +834,24 @@
           }
         ]
       ]
+    },
+    "Filtro de risk_score para tickets": {
+      "main": [
+        [
+          {
+            "node": "Crear ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "d71649f8-8f86-41b3-9ba3-9c9638e9c1f1",
+  "versionId": "27b13010-c7f8-47a0-abcf-bd479af70c01",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "7478c350e39689cddadf155b6c5aead67e0635cfe1aa4e6d60c18ecb354db193"
