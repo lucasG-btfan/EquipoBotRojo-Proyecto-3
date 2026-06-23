@@ -247,7 +247,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const alert = $json;\nconst alertname = alert.commonLabels?.alertname || alert.groupLabels?.alertname || 'Unknown';\n\nconst mensajes = {\n  'IpBaneadaDetectada': {\n    title: `[BANEO] IPs baneadas en Jail: ${alert.commonLabels?.jail || 'n8n-auth-jail'}`,\n    description: `Prometheus detectó IPs baneadas. Revisar tickets de logs para detalles.`,\n    priority: 'medium'\n  },\n  'Fail2banCaido': {\n    title: `[CRÍTICO] Fail2ban está caído`,\n    description: `El servicio fail2ban no responde. El sistema de bloqueo automático está inactivo.`,\n    priority: 'critical'\n  },\n  'AtaqueMasivo': {\n    title: `[ATAQUE MASIVO] Más de 10 IPs baneadas simultáneamente`,\n    description: `Prometheus detectó un volumen anormal de baneos. Posible ataque coordinado.`,\n    priority: 'critical'\n  }\n};\n\nconst info = mensajes[alertname] || {\n  title: `[ALERTA] ${alertname}`,\n  description: `Alerta de Prometheus: ${alertname}`,\n  priority: 'medium'\n};\n\nreturn {\n  json: {\n    ticket_number: 'TICKET-METRICA-' + Math.random().toString(36).substr(2, 6).toUpperCase(),\n    title: info.title,\n    description: info.description,\n    status: 'open',\n    priority: info.priority,\n    category: 'IPS/Metrics',\n    source_ip: 'Prometheus',\n    threat_score: info.priority === 'critical' ? 100 : 50,\n    assigned_to: 'security_team@example.com',\n    created_at: new Date().toISOString()\n  }\n};"
+        "jsCode": "const alert = $json;\nconst alertname = alert.labels?.alertname || alert.commonLabels?.alertname || alert.groupLabels?.alertname || 'Unknown';\n\nconst mensajes = {\n  'IpBaneadaDetectada': {\n    title: `[BANEO] IPs baneadas en Jail: ${alert.labels?.jail || 'n8n-auth-jail'}`,\n    description: `Prometheus detectó IPs baneadas. Revisar tickets de logs para detalles.`,\n    priority: 'medium'\n  },\n  'Fail2banCaido': {\n    title: `[CRÍTICO] Fail2ban está caído`,\n    description: `El servicio fail2ban no responde. El sistema de bloqueo automático está inactivo.`,\n    priority: 'critical'\n  },\n  'AtaqueMasivo': {\n    title: `[ATAQUE MASIVO] Más de 10 IPs baneadas simultáneamente`,\n    description: `Prometheus detectó un volumen anormal de baneos. Posible ataque coordinado.`,\n    priority: 'critical'\n  }\n};\n\nconst info = mensajes[alertname] || {\n  title: `[ALERTA] ${alertname}`,\n  description: `Alerta de Prometheus: ${alertname}`,\n  priority: 'medium'\n};\n\nreturn {\n  json: {\n    ticket_number: 'TICKET-METRICA-' + Math.random().toString(36).substr(2, 6).toUpperCase(),\n    title: info.title,\n    description: info.description,\n    status: 'open',\n    priority: info.priority,\n    category: 'IPS/Metrics',\n    source_ip: 'Prometheus',\n    threat_score: info.priority === 'critical' ? 100 : 50,\n    assigned_to: 'security_team@example.com',\n    created_at: new Date().toISOString()\n  }\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -549,7 +549,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "7633d746-e7c6-4d92-b343-8d75e6954112",
+  "versionId": "cb7ebaa1-2246-401e-92c1-893baa267736",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "7478c350e39689cddadf155b6c5aead67e0635cfe1aa4e6d60c18ecb354db193"
