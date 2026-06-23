@@ -345,3 +345,14 @@ Subworkflow n8n enviando alertas a Wazuh via JWT
 Documentación oficial Wazuh 4.7: https://documentation.wazuh.com/4.7/
 Wazuh Docker deployment: https://documentation.wazuh.com/4.7/deployment-options/docker/docker-installation.html
 Wazuh API reference: https://documentation.wazuh.com/4.7/user-manual/api/reference.html
+
+# Avances 5/4
+El alerts no funcionaba, ahora recolecta los logs que se envian (al menos por terminal, con la forma mas fiel de simularlos).
+N8N ahora lee el archivo alerts y al terminar todo el trabajo del workflow principal borra su contenido para evitar volver a procesar los mismos logs. Ademas, fue modificado para que sea capaz de procesar 5 logs en una ejecucion, separando cada proceso.
+N8N ahora envia a postgres 2 datos mas que estaban null en la tabla, ahora funciona todo (creo que no falta nada por este lado).
+Use el logstash correcto.
+Cree mi agente en wazuh.
+Hubo problemas con kibana y wazuh: 
+ -no puedo ver los datos en wazuh
+ -arregle kibana, tengo mi tabla y el indice n8n-alerts* y exporte el ndjson
+Creo que esta todo listo, solo falta arreglar wazuh y asegurarse que tanto eso como kibana funcionen.

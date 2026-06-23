@@ -7,6 +7,6 @@ enabled = true
 port = 5678,22,80,443
 filter = n8n-alert-filter
 # ruta en la que fail2ban lee
-logpath = /var/log/security/alerts.log 
+logpath = /var/log/security/fail2ban.log
 maxretry = 1
 bantime = 3600
