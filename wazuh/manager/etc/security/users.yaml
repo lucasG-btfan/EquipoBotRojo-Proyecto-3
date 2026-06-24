@@ -1,6 +1,6 @@
 users:
   - username: wazuh-wui
-    password: "wazuhwazuh"
+    password: "MyS3cr37P450r"
     allow_run_as: false
     roles:
       - administrator

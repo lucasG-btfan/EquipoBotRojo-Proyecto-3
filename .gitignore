@@ -9,3 +9,6 @@ n8n_data/
 # OS
 .DS_Store
 Thumbs.db
+
+# Wazuh - regenerado automáticamente por wazuh-apid desde users.yaml
+wazuh/manager/etc/security/rbac.db
