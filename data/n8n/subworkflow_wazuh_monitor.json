@@ -19,12 +19,12 @@
     },
     {
       "parameters": {
-        "jsCode": "// Extraer token y preparar el payload para Wazuh\nconst token = $input.first().json.data.token;\nconst alert = $('Webhook - Recibir Alerta').first().json.body;\nconst threatInfo = alert.threat_intel || {};\n\nconst wazuhAlert = {\n  timestamp: alert.timestamp || new Date().toISOString(),\n  rule: {\n    id: alert.rule_id || 100001,\n    level: alert.severity === 'critical' ? 12 :\n           alert.severity === 'high' ? 8 :\n           alert.severity === 'medium' ? 5 : 3,\n    description: alert.description || 'No description',\n    mitre: {\n      tactic: alert.category === 'authentication_failure' ? 'Credential Access' : 'Unknown',\n      technique: alert.rule_name || 'Unknown'\n    }\n  },\n  agent: { id: '003', name: 'n8n-workflow' },\n  data: {\n    srcip: alert.source_ip || '0.0.0.0',\n    rule_name: alert.rule_name || 'Unknown',\n    risk_score: alert.risk_score || 0,\n    risk_level: alert.risk_level || 'LOW',\n    event_count: alert.event_count || 1,\n    threat_intel: {\n      reputation: threatInfo.threat_info?.reputation || 'unknown',\n      confidence: threatInfo.threat_info?.confidence || 0,\n      is_private_ip: threatInfo.is_private_ip || false,\n      geo_info: threatInfo.geo_info || {}\n    }\n  },\n  location: 'n8n_workflow',\n  full_log: JSON.stringify(alert.raw_log || alert)\n};\n\nreturn [{ json: { \n  data_source: \"n8n_workflow\",\n  wazuh_token: token, \n  wazuh_alert: JSON.stringify(wazuhAlert), \n  original_alert: alert \n} }]"
+        "jsCode": "const alert = $('Webhook - Recibir Alerta').first().json.body;\nconst threatInfo = alert.threat_intel || {};\n\nconst level = alert.severity === 'critical' ? 12 :\n              alert.severity === 'high' ? 8 :\n              alert.severity === 'medium' ? 4 :\n              alert.severity === 'low' ? 2 : 1;\n\nconst ruleName = (alert.rule_name || 'unknown').replace(/\"/g, '').replace(/'/g, '');\nconst description = (alert.description || 'No description').replace(/\"/g, '').replace(/'/g, '').replace(/\\n/g, ' ').replace(/[$\\\\]/g, '');\nconst srcip = alert.source_ip || '0.0.0.0';\nconst riskScore = alert.risk_score || 0;\n\n// Formato RFC 3164: <PRI>timestamp hostname TAG: message\n// TAG = N8NALERT (sin underscore) para que predecedor extraiga program_name\nconst months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];\nconst now = new Date();\nconst pad2 = (n) => String(n).padStart(2, '0');\nconst ts = months[now.getMonth()] + ' ' + pad2(now.getDate()) + ' ' + pad2(now.getHours()) + ':' + pad2(now.getMinutes()) + ':' + pad2(now.getSeconds());\n\nconst syslogMsg = '<13>' + ts + ' n8n-workflow N8NALERT: rule=' + ruleName + ' level=' + level + ' srcip=' + srcip + ' score=' + riskScore + ' desc=\"' + description + '\"';\n\n// Single quotes para evitar que sh expanda $, `, etc. No hay ' en ruleName/description porque los limpiamos.\n// El \\\\n se pasa literal a printf, que lo interpreta como newline.\n// El TAG debe empezar en columna 0 seguido de : para que predecedor extraiga program_name\nconst command = \"printf '\" + syslogMsg + \"\\\\n' | nc -u -w2 wazuh-manager 514\";\n\nreturn [{ json: {\n  data_source: \"n8n_workflow\",\n  command: command,\n  syslog_message: syslogMsg,\n  original_alert: alert\n} }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        448,
+        240,
         0
       ],
       "id": "d9395837-1209-477e-bea5-b8e96f5d7528",
@@ -32,66 +32,16 @@
     },
     {
       "parameters": {
-        "jsCode": "console.log('Wazuh y Logstash: envío completado correctamente.');\nreturn [{ json: { success: true, timestamp: new Date().toISOString() } }];"
+        "command": "={{ $json.command }}"
       },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
       "position": [
-        1104,
+        448,
         0
       ],
-      "id": "306545f1-ce0e-4c67-b606-78a358d6100c",
-      "name": "Log Éxito"
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "http://wazuh-manager:55000/security/user/authenticate",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpBasicAuth",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        240,
-        0
-      ],
-      "id": "24872c78-2023-4641-aef8-35b05d33fa07",
-      "name": "Obtener Token JWT1",
-      "credentials": {
-        "httpBasicAuth": {
-          "id": "2JMK8Ls4L1VHFdvR",
-          "name": "Credencial Wazuh Rafa"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "http://wazuh-manager:55000/events",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $json.wazuh_token }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"events\": [ {{ JSON.stringify($json.wazuh_alert) }} ]\n}",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        656,
-        0
-      ],
-      "id": "797c5ffc-7c24-4701-8ba3-c253e02cf57f",
-      "name": "Enviar a Wazuh1"
+      "id": "e7b6a5d4-c3b2-4198-8765-4321fedcba09",
+      "name": "Enviar Syslog UDP"
     },
     {
       "parameters": {
@@ -105,27 +55,29 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        864,
+        656,
         0
       ],
       "id": "f2f28bf0-5589-4fff-a6e8-442a14e60be6",
       "name": "Enviar a Logstash1"
+    },
+    {
+      "parameters": {
+        "jsCode": "console.log('Wazuh y Logstash: envío completado correctamente.');\nreturn [{ json: { success: true, timestamp: new Date().toISOString() } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        864,
+        0
+      ],
+      "id": "306545f1-ce0e-4c67-b606-78a358d6100c",
+      "name": "Log Éxito"
     }
   ],
   "pinData": {},
   "connections": {
     "Webhook - Recibir Alerta": {
-      "main": [
-        [
-          {
-            "node": "Obtener Token JWT1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Obtener Token JWT1": {
       "main": [
         [
           {
@@ -140,14 +92,14 @@
       "main": [
         [
           {
-            "node": "Enviar a Wazuh1",
+            "node": "Enviar Syslog UDP",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Enviar a Wazuh1": {
+    "Enviar Syslog UDP": {
       "main": [
         [
           {

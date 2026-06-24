@@ -194,10 +194,12 @@ services:
       - DB_POSTGRESDB_PASSWORD=db_pass
       - N8N_DIAGNOSTICS_ENABLED=false
       - N8N_USER_FOLDER=/root/.n8n-files
+      - NODES_EXCLUDE=[]
     volumes:
       - ./n8n_config:/home/node/.n8n
       - ./logs:/home/node/logs
       - ./logs:/root/.n8n-files:rw
+      - ./logs/n8n-wazuh-alerts:/n8n-wazuh-alerts:rw
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       - postgres
@@ -256,10 +258,12 @@ services:
       - wazuh-manager-data:/var/ossec/data
       - ./wazuh/manager/etc/ossec.conf:/var/ossec/etc/ossec.conf
       - ./wazuh/manager/etc/rules/local_rules.xml:/var/ossec/etc/rules/local_rules.xml
+      - ./wazuh/manager/etc/rules/local_rules.xml:/var/ossec/ruleset/rules/100000-local_rules.xml
       - ./wazuh/manager/etc/shared:/var/ossec/etc/shared
       - ./wazuh/manager/etc/api.yaml:/var/ossec/api/configuration/api.yaml  
       - ./wazuh/manager/etc/security:/var/ossec/api/configuration/security  
       - ./logs:/host_logs:ro
+      - ./logs/n8n-wazuh-alerts:/n8n_alerts:ro
       - ./wazuh/manager/etc/filebeat.yml:/var/ossec/etc/filebeat.yml
       - ./wazuh/manager/etc/client.keys:/var/ossec/etc/client.keys
     networks:
