@@ -20,7 +20,7 @@ cache:
   enabled: yes
   time: 0.750
 access:
-  max_login_attempts: 999
-  block_time: 0
-  max_request_per_minute: 999
+  max_login_attempts: 5
+  block_time: 300
+  max_request_per_minute: 300
 use_only_authd: no

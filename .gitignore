@@ -9,3 +9,18 @@ n8n_data/
 # OS
 .DS_Store
 Thumbs.db
+
+# Wazuh
+wazuh/manager/etc/security/rbac.db
+
+# Credenciales y archivos sensibles
+wazuh/manager/etc/security/private_key.pem
+wazuh/manager/etc/security/public_key.pem
+wazuh/manager/etc/client.keys
+
+# n8n
+n8n_config/
+
+# Python
+__pycache__/
+*.pyc
