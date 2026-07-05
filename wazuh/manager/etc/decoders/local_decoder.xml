@@ -1,0 +1,5 @@
+<decoder name="n8n_workflow">
+  <prematch>^wazuh_monitor - - - </prematch>
+  <regex>rule_id=(\S+) level=(\S+) srcip=(\S+) description="(.+)" risk_score=(\S+)</regex>
+  <order>rule_id, level, srcip, description, risk_score</order>
+</decoder>

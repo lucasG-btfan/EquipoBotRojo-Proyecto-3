@@ -217,7 +217,7 @@
     },
     {
       "parameters": {
-        "command": "truncate -s 0 /root/.n8n-files/security/alerts"
+        "command": "truncate -s 0 /root/.n8n-files/security/alerts.log"
       },
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
@@ -244,7 +244,7 @@
     },
     {
       "parameters": {
-        "fileSelector": "/root/.n8n-files/security/alerts",
+        "fileSelector": "/root/.n8n-files/security/alerts.log",
         "options": {
           "dataPropertyName": "data"
         }
@@ -803,7 +803,7 @@
       ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1"
   },

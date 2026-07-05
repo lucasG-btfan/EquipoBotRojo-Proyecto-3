@@ -7,7 +7,7 @@
   </rule>
 
   <rule id="100002" level="7">
-    <if_sid>5716</if_sid>
+    <decoded_as>syslog</decoded_as>
     <match>scan|nmap|masscan</match>
     <description>Port scanning activity detected</description>
     <group>reconnaissance</group>
@@ -18,5 +18,53 @@
     <match>sql injection|union select|exec xp|drop table|insert into|select.*from</match>
     <description>Possible SQL injection attack</description>
     <group>web_attack</group>
+  </rule>
+</group>
+
+<group name="n8n">
+  <rule id="110000" level="0" noalert="1">
+    <program_name>N8NALERT</program_name>
+    <description>N8N event - grouping rule (no alert)</description>
+    <group>n8n_custom</group>
+  </rule>
+
+  <!-- CRITICAL (level 12) -->
+  <rule id="110001" level="12">
+    <if_sid>110000</if_sid>
+    <regex>level=12\b</regex>
+    <description>N8N: Critical alert received</description>
+    <group>n8n_custom</group>
+  </rule>
+
+  <!-- HIGH (level 10) / level=8 in the message -->
+  <rule id="110002" level="10">
+    <if_sid>110000</if_sid>
+    <regex>level=8\b</regex>
+    <description>N8N: High alert received</description>
+    <group>n8n_custom</group>
+  </rule>
+
+  <!-- MEDIUM (level 7) / level=4 in the message -->
+  <rule id="110003" level="7">
+    <if_sid>110000</if_sid>
+    <regex>level=4\b</regex>
+    <description>N8N: Medium alert received</description>
+    <group>n8n_custom</group>
+  </rule>
+
+  <!-- LOW (level 5) / level=2 in the message -->
+  <rule id="110004" level="5">
+    <if_sid>110000</if_sid>
+    <regex>level=2\b</regex>
+    <description>N8N: Low alert received</description>
+    <group>n8n_custom</group>
+  </rule>
+
+  <!-- INFO (level 3) / level=1 in the message -->
+  <rule id="110005" level="3">
+    <if_sid>110000</if_sid>
+    <regex>level=1\b</regex>
+    <description>N8N: Informational notification received</description>
+    <group>n8n_custom</group>
   </rule>
 </group>
