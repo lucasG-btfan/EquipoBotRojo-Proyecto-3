@@ -32,7 +32,7 @@
         -144
       ],
       "id": "63869403-d691-4cee-bf81-b20f3be9de15",
-      "name": "HTTP Request"
+      "name": "Informacion de IP's baneadas"
     },
     {
       "parameters": {
@@ -43,10 +43,10 @@
       "typeVersion": 4.3,
       "position": [
         -32,
-        0
+        48
       ],
       "id": "4ead6584-5cdf-474d-9cf8-0f8c7f8392cf",
-      "name": "HTTP Request1"
+      "name": "Informacion del estado de Fail2ban"
     },
     {
       "parameters": {
@@ -59,7 +59,7 @@
         -96
       ],
       "id": "460effa9-ffe9-4a1e-bf0b-0438301f59b0",
-      "name": "Code in JavaScript"
+      "name": "Estructurar salida"
     },
     {
       "parameters": {
@@ -155,7 +155,7 @@
         -96
       ],
       "id": "b8054a9d-1eaf-46cc-9b95-45ac7bad4f08",
-      "name": "Insert rows in a table",
+      "name": "Insertar en tabla de metricas",
       "credentials": {
         "postgres": {
           "id": "fxbYllSjTFqyrT5U",
@@ -170,45 +170,45 @@
       "main": [
         [
           {
-            "node": "HTTP Request",
+            "node": "Informacion de IP's baneadas",
             "type": "main",
             "index": 0
           },
           {
-            "node": "HTTP Request1",
+            "node": "Informacion del estado de Fail2ban",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "HTTP Request1": {
+    "Informacion de IP's baneadas": {
       "main": [
         [
           {
-            "node": "Code in JavaScript",
+            "node": "Estructurar salida",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "HTTP Request": {
+    "Informacion del estado de Fail2ban": {
       "main": [
         [
           {
-            "node": "Code in JavaScript",
+            "node": "Estructurar salida",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code in JavaScript": {
+    "Estructurar salida": {
       "main": [
         [
           {
-            "node": "Insert rows in a table",
+            "node": "Insertar en tabla de metricas",
             "type": "main",
             "index": 0
           }
@@ -220,7 +220,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "0f46a09c-d6f4-40eb-a983-c7a6cf2ff0c2",
+  "versionId": "03577b7c-ad4a-4fe3-b308-5b738a90c710",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "7478c350e39689cddadf155b6c5aead67e0635cfe1aa4e6d60c18ecb354db193"

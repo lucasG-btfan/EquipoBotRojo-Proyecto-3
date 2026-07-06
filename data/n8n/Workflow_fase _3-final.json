@@ -22,25 +22,12 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nconst rawText = items[0].json.data || items[0].json.text || \"\";\n\nif (!rawText) {\n  throw new Error(\"No se encontró texto en el nodo anterior. Revisa el nodo Extract from File.\");\n}\n\nconst lines = rawText.split('\\n').filter(line => line.trim() !== '');\n\nreturn lines.map(line => {\n  return {\n    json: {\n      timestamp: new Date().toISOString(),\n      raw: line,\n      file: 'auth.log',\n      source: 'real_file'\n    }\n  };\n});"
+        "jsCode": "const logs = $input.all();\nconst rules = [\n  { id: 4, name: 'Root Login Attempt', pattern: 'Failed|authentication|root', severity: 'critical', threshold: 1, description: '¡Intento crítico de acceso como ROOT!' },\n  { id: 7, name: 'Access Denied', pattern: 'Access denied|denied|forbidden', severity: 'high', threshold: 1, description: 'Acceso denegado a recurso crítico' },\n  { id: 5, name: 'Port Scan', pattern: 'DPT=|scan|probe', severity: 'medium', threshold: 3, description: 'Posible escaneo de puertos' },\n  { id: 6, name: 'Service Restart', pattern: 'Started', severity: 'info', threshold: 1, description: 'Servicio iniciado/reiniciado' },\n  { id: 8, name: 'Kernel Oops', pattern: 'Oops', severity: 'critical', threshold: 1, description: 'Error crítico del Kernel detectado' },\n  { id: 1, name: 'SSH Failed Password', pattern: 'Failed password', severity: 'high', threshold: 1, description: 'Intento de acceso fallido SSH' },\n  { id: 2, name: 'Sudo Usage', pattern: 'sudo', severity: 'medium', threshold: 1, description: 'Uso de comando SUDO detectado' },\n  { id: 3, name: 'Iptables Drop', pattern: 'iptables.*DROP', severity: 'high', threshold: 1, description: 'Paquete bloqueado por Firewall' }\n];\n\nconst extractIP = (text) => {\n  const ipRegex = /\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b/;\n  const match = text.match(ipRegex);\n  return match ? match[0] : '127.0.0.1';\n};\n\nlet alerts = [];\n\n// Procesamos cada log de entrada individualmente\nlogs.forEach(item => {\n  const logRaw = item.json.raw;\n  const sourceIp = extractIP(logRaw);\n  \n  // Usamos un bucle for...of para poder usar 'break'\n  for (const rule of rules) {\n    const regex = new RegExp(rule.pattern, 'i');\n    if (regex.test(logRaw)) {\n      alerts.push({\n        json: {\n          rule_id: rule.id,\n          rule_name: rule.name,\n          severity: rule.severity,\n          category: (rule.severity === 'critical' || rule.severity === 'high') ? 'attack' : 'system',\n          source_ip: sourceIp,\n          target_host: 'server1',\n          description: rule.description,\n          raw_log: logRaw,\n          timestamp: new Date().toISOString()\n        }\n      });\n      // IMPORTANTE: Al encontrar la regla más específica, saltamos al siguiente log\n      break; \n    }\n  }\n});\n\nreturn alerts.length > 0 ? alerts : logs.map(l => ({\n  json: {\n    rule_name: 'Monitoring Active',\n    severity: 'info',\n    category: 'system',\n    description: 'Actividad de log estándar detectada',\n    source_ip: extractIP(l.json.raw || ''),\n    raw_log: l.json.raw\n  }\n}));"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -896,
-        144
-      ],
-      "id": "94c5749e-8f08-4d8f-9062-5216f2eda9af",
-      "name": "Code in JavaScript"
-    },
-    {
-      "parameters": {
-        "jsCode": "const logs = $input.all();\nconst rules = [\n  { id: 1, name: 'SSH Failed Password', pattern: 'Failed password', severity: 'high', threshold: 1, description: 'Intento de acceso fallido SSH' },\n  { id: 2, name: 'Sudo Usage', pattern: 'sudo', severity: 'medium', threshold: 1, description: 'Uso de comando SUDO detectado' },\n  { id: 3, name: 'Iptables Drop', pattern: 'iptables.*DROP', severity: 'high', threshold: 1, description: 'Paquete bloqueado por Firewall' },\n  { id: 4, name: 'Root Login Attempt', pattern: 'Failed password for root', severity: 'critical', threshold: 1, description: '¡Intento crítico de acceso como ROOT!' },\n  { id: 5, name: 'Port Scan', pattern: 'DPT=', severity: 'medium', threshold: 3, description: 'Posible escaneo de puertos' },\n  { id: 6, name: 'Service Restart', pattern: 'Started', severity: 'info', threshold: 1, description: 'Servicio iniciado/reiniciado' },\n  { id: 7, name: 'Access Denied', pattern: 'Access denied', severity: 'high', threshold: 1, description: 'Acceso denegado a recurso crítico' },\n  { id: 8, name: 'Kernel Oops', pattern: 'Oops', severity: 'critical', threshold: 1, description: 'Error crítico del Kernel detectado' }\n];\n\nconst extractIP = (text) => {\n  const ipRegex = /\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b/;\n  const match = text.match(ipRegex);\n  return match ? match[0] : '127.0.0.1';\n};\n\nlet alerts = [];\n\n// Procesamos cada log de entrada individualmente\nlogs.forEach(item => {\n  const logRaw = item.json.raw;\n  const sourceIp = extractIP(logRaw);\n  \n  // Usamos un bucle for...of para poder usar 'break'\n  for (const rule of rules) {\n    const regex = new RegExp(rule.pattern, 'i');\n    if (regex.test(logRaw)) {\n      alerts.push({\n        json: {\n          rule_id: rule.id,\n          rule_name: rule.name,\n          severity: rule.severity,\n          category: (rule.severity === 'critical' || rule.severity === 'high') ? 'attack' : 'system',\n          source_ip: sourceIp,\n          target_host: 'server1',\n          description: rule.description,\n          raw_log: logRaw,\n          timestamp: new Date().toISOString()\n        }\n      });\n      // IMPORTANTE: Al encontrar la regla más específica, saltamos al siguiente log\n      break; \n    }\n  }\n});\n\nreturn alerts.length > 0 ? alerts : logs.map(l => ({\n  json: {\n    rule_name: 'Monitoring Active',\n    severity: 'info',\n    category: 'system',\n    description: 'Actividad de log estándar detectada',\n    source_ip: extractIP(l.json.raw || ''),\n    raw_log: l.json.raw\n  }\n}));"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -592,
+        -176,
         144
       ],
       "id": "0e7d3bf4-d641-4f64-a51c-92be91c20d4f",
@@ -53,141 +40,11 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -384,
+        32,
         144
       ],
       "id": "6e28bd89-490e-4c30-8e92-e2163a79f059",
       "name": "Enriquecimiento Threat Intel"
-    },
-    {
-      "parameters": {
-        "rules": {
-          "values": [
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 2
-                },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.severity }}",
-                    "rightValue": "info",
-                    "operator": {
-                      "type": "string",
-                      "operation": "notEquals"
-                    },
-                    "id": "ae1ffb72-f4ec-4b10-8f05-6c0be29138b6"
-                  }
-                ],
-                "combinator": "and"
-              },
-              "renameOutput": true
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 2
-                },
-                "conditions": [
-                  {
-                    "id": "1e1a5dda-dcc2-4514-9689-a330cbdf31e8",
-                    "leftValue": "={{ $json.severity }}",
-                    "rightValue": "info",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    }
-                  }
-                ],
-                "combinator": "and"
-              }
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.switch",
-      "typeVersion": 3.3,
-      "position": [
-        -160,
-        144
-      ],
-      "id": "f0605a7f-45e8-4aac-9e4a-1c631a0a25a8",
-      "name": "Switch"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "eff1dded-b11d-4935-8b10-34be76f9f3ee",
-              "leftValue": "={{ $json.risk_level }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "notEmpty",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.filter",
-      "typeVersion": 2.2,
-      "position": [
-        -32,
-        32
-      ],
-      "id": "b0128774-17f7-41c1-b5b2-f242a48fb7d7",
-      "name": "Filter"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "eff1dded-b11d-4935-8b10-34be76f9f3ee",
-              "leftValue": "={{ $json.risk_level }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "notEmpty",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.filter",
-      "typeVersion": 2.2,
-      "position": [
-        80,
-        480
-      ],
-      "id": "b9735f35-359d-4387-a177-5ad18ca57025",
-      "name": "Filter1"
     },
     {
       "parameters": {
@@ -196,7 +53,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        80,
+        496,
         864
       ],
       "id": "abd3e1ca-0d7b-47f5-a5ef-0a5c3057fad6",
@@ -209,7 +66,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        400,
+        1024,
         16
       ],
       "id": "1548fad9-57f6-4918-acd6-d29bfa269c72",
@@ -222,7 +79,7 @@
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        1072,
+        1696,
         464
       ],
       "id": "cd7ef903-0f64-4e08-9520-b732ea81deb4",
@@ -457,7 +314,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        208,
+        832,
         0
       ],
       "id": "1bbb361c-cd5e-44b6-8e19-cf9e871033d6",
@@ -482,7 +339,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        304,
+        928,
         192
       ],
       "id": "38de0180-f7af-419c-b3f7-e6579a3b9f8e",
@@ -522,7 +379,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        304,
+        752,
         400
       ],
       "id": "940a26ec-8f2c-4c6c-afbc-3b8615da0186",
@@ -540,7 +397,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        272,
+        688,
         592
       ],
       "id": "60f33dfa-35a6-40d7-857e-d8a391a88c4a",
@@ -553,7 +410,7 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        752,
+        1376,
         320
       ],
       "id": "2bc5aba4-972a-4881-a39e-62ab8ef507e5",
@@ -568,7 +425,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        256,
+        880,
         -192
       ],
       "id": "5df76772-ccc5-4c10-9957-d25c5bf3db67",
@@ -579,6 +436,229 @@
           "name": "Postgres account"
         }
       }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "98293be9-ab22-49ce-87fd-82f3d95f1339",
+              "leftValue": "={{ $json.risk_score }}",
+              "rightValue": 70,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        704,
+        128
+      ],
+      "id": "80035ea6-081d-44d8-a6e0-313ef2e4d3eb",
+      "name": "Filtro de risk_score para tickets"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a6bf72af-2769-405a-b7c7-892bfba6ecd8",
+              "leftValue": "={{ $json.data }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1120,
+        144
+      ],
+      "id": "5babc901-a988-404c-af2b-e90e22016822",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "jsCode": "console.log(\"No hay nuevas alertas para procesar - \" + new Date().toISOString());\nreturn [{ json: { mensaje: \"No hay nuevas alertas para procesar\", timestamp: new Date().toISOString() } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -880,
+        16
+      ],
+      "id": "5651d2fb-1367-487e-81dc-fd701a2405b6",
+      "name": "Sin alertas"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst rawText = items[0].json.data || items[0].json.text || \"\";\n\nif (!rawText) {\n  throw new Error(\"No se encontró texto en el nodo anterior. Revisa el nodo Extract from File.\");\n}\n\nconst lines = rawText.split('\\n').filter(line => line.trim() !== '');\n\nreturn lines.map(line => {\n  return {\n    json: {\n      timestamp: new Date().toISOString(),\n      raw: line,\n      file: 'auth.log',\n      source: 'real_file'\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -688,
+        144
+      ],
+      "id": "94c5749e-8f08-4d8f-9062-5216f2eda9af",
+      "name": "Estructurar Entradas de Log"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "eff1dded-b11d-4935-8b10-34be76f9f3ee",
+              "leftValue": "={{ $json.risk_level }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        496,
+        480
+      ],
+      "id": "b9735f35-359d-4387-a177-5ad18ca57025",
+      "name": "Filtro de risk_level para Wazuh"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "eff1dded-b11d-4935-8b10-34be76f9f3ee",
+              "leftValue": "={{ $json.risk_level }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        368,
+        -32
+      ],
+      "id": "b0128774-17f7-41c1-b5b2-f242a48fb7d7",
+      "name": "Filtro risk level"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.severity }}",
+                    "rightValue": "info",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEquals"
+                    },
+                    "id": "ae1ffb72-f4ec-4b10-8f05-6c0be29138b6"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "1e1a5dda-dcc2-4514-9689-a330cbdf31e8",
+                    "leftValue": "={{ $json.severity }}",
+                    "rightValue": "info",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        256,
+        144
+      ],
+      "id": "f0605a7f-45e8-4aac-9e4a-1c631a0a25a8",
+      "name": "Switch por severidad"
     }
   ],
   "pinData": {},
@@ -588,17 +668,6 @@
         [
           {
             "node": "Leer archivo alerts",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Code in JavaScript": {
-      "main": [
-        [
-          {
-            "node": "Detectar Amenazas",
             "type": "main",
             "index": 0
           }
@@ -620,67 +689,7 @@
       "main": [
         [
           {
-            "node": "Switch",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Switch": {
-      "main": [
-        [
-          {
-            "node": "Filter",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Filter1",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Nodo 8: Log Only",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Filter": {
-      "main": [
-        [
-          {
-            "node": "Registrar alerta",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Crear ticket",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Bloquear IP maliciosa",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Execute a SQL query",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Filter1": {
-      "main": [
-        [
-          {
-            "node": "Enviar a Wazuh",
+            "node": "Switch por severidad",
             "type": "main",
             "index": 0
           }
@@ -696,7 +705,7 @@
       "main": [
         [
           {
-            "node": "Code in JavaScript",
+            "node": "If",
             "type": "main",
             "index": 0
           }
@@ -801,13 +810,113 @@
           }
         ]
       ]
+    },
+    "Filtro de risk_score para tickets": {
+      "main": [
+        [
+          {
+            "node": "Crear ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Sin alertas",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Estructurar Entradas de Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Estructurar Entradas de Log": {
+      "main": [
+        [
+          {
+            "node": "Detectar Amenazas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtro de risk_level para Wazuh": {
+      "main": [
+        [
+          {
+            "node": "Enviar a Wazuh",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtro risk level": {
+      "main": [
+        [
+          {
+            "node": "Registrar alerta",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Bloquear IP maliciosa",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Filtro de risk_score para tickets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch por severidad": {
+      "main": [
+        [
+          {
+            "node": "Filtro risk level",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Filtro de risk_level para Wazuh",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Nodo 8: Log Only",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "active": true,
+  "active": false,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "d71649f8-8f86-41b3-9ba3-9c9638e9c1f1",
+  "versionId": "34f2488f-ad17-46af-86c2-b15bfc15fb0c",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "7478c350e39689cddadf155b6c5aead67e0635cfe1aa4e6d60c18ecb354db193"

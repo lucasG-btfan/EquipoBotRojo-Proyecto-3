@@ -19,7 +19,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json.datos_originales || $input.first().json;\n\n// 1. Extraer la IP atacante\nconst sourceIp = input.source_ip || \"0.0.0.0\";\n\n// 2. Sincronizar Prioridad con el Score (70 = HIGH)\nconst score = input.risk_score || 0;\nconst finalPriority = score >= 80 ? 'critical' : score >= 60 ? 'high' : 'medium';\n\nreturn [{\n    json: {\n        ticket_number: 'TICKET-LOG-' + Math.random().toString(36).substr(2, 6).toUpperCase(),\n        title: `[DETECCIÓN] ${input.rule_name || \"Ataque SSH\"}`,\n        description: `Fallo de login detectado desde ${sourceIp}`,\n        status: 'open',\n        priority: $('Code in JavaScript1').first().json.datos_originales.severity,\n        category: `HIDS/Logs-${input.rule_name}`,\n        source_ip: sourceIp,\n        threat_score: score,\n        assigned_to: 'rafa.legendsss@gmail.com',\n        created_at: new Date().toISOString(),\n        // 3. RELLENAR ALERT_REFERENCE (para que no salga null)\n        alert_reference: input.threat_intel || { info: \"No intel data\" }\n    }\n}];"
+        "jsCode": "const input = $input.first().json.datos_originales || $input.first().json;\n\n// 1. Extraer la IP atacante\nconst sourceIp = input.source_ip || \"0.0.0.0\";\n\n// 2. Sincronizar Prioridad con el Score (70 = HIGH)\nconst score = input.risk_score || 0;\nconst finalPriority = score >= 80 ? 'critical' : score >= 60 ? 'high' : 'medium';\n\nreturn [{\n    json: {\n        ticket_number: 'TICKET-LOG-' + Math.random().toString(36).substr(2, 6).toUpperCase(),\n        title: `[DETECCIÓN] ${input.rule_name || \"Ataque SSH\"}`,\n        description: `Fallo de login detectado desde ${sourceIp}`,\n        status: 'open',\n        priority: $('Definir campo de origen').first().json.datos_originales.severity,\n        category: `HIDS/Logs-${input.rule_name}`,\n        source_ip: sourceIp,\n        threat_score: score,\n        assigned_to: 'rafa.legendsss@gmail.com',\n        created_at: new Date().toISOString(),\n        // 3. RELLENAR ALERT_REFERENCE (para que no salga null)\n        alert_reference: input.threat_intel || { info: \"No intel data\" }\n    }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -209,7 +209,34 @@
     },
     {
       "parameters": {
-        "jsCode": "const ticket = $('Insertar Ticket en BD').first().json; \nconst originalRuleName = $('Code in JavaScript1').first().json.datos_originales.rule_name;\n\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: 'http://logstash:8080',\n    body: {\n      ...ticket,\n      rule_name: originalRuleName, // 🔥 ¡ACÁ TIENE QUE IR para que viaje a Kibana!\n      type: 'ticket_created',\n      source: 'n8n_ticket_system',\n      timestamp: new Date().toISOString()\n    },\n    json: true \n  });\n} catch (error) {\n  throw new Error('Error enviando ticket a Logstash: ' + error.message);\n}\n\nconst response = {\n  success: true,\n  ticket_number: ticket.ticket_number,\n  message: `Ticket ${ticket.ticket_number} creado exitosamente`,\n  details: {\n    priority: ticket.priority,\n    category: ticket.category,\n    rule_name: originalRuleName,\n    assigned_to: ticket.assigned_to,\n    timestamp: new Date().toISOString()\n  }\n};\n\nreturn [{ json: response }];"
+        "fieldToSplitOut": "datos_originales.alerts",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -864,
+        192
+      ],
+      "id": "ac3c98cb-e818-4738-a202-b87dc3870203",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputItems = $input.all();\nif (inputItems.length === 0) {\n  throw new Error(\"No se recibieron datos del ticket en este nodo.\");\n}\nconst ticket = inputItems[0].json;\n\nlet originalRuleName = \"Alerta Métrica Prometheus\";\ntry {\n  const primerNodo = $('Definir campo de origen').first().json;\n  if (primerNodo.datos_originales?.alerts && primerNodo.datos_originales.alerts.length > 0) {\n    const primeraAlerta = primerNodo.datos_originales.alerts[0];\n    originalRuleName = primeraAlerta.labels?.alertname || primerNodo.datos_originales.commonLabels?.alertname || \"Prometheus Alert\";\n  }\n} catch (e) {\n  // Si por alguna razón no puede leer el primer nodo, usamos el título del ticket como fallback\n  originalRuleName = ticket.title || \"Prometheus Alert\";\n}\n\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: 'http://logstash:8080',\n    body: {\n      ...ticket,\n      rule_name: originalRuleName, \n      type: 'ticket_created',\n      source: 'prometheus_alertmanager',\n      timestamp: new Date().toISOString()\n    },\n    json: true \n  });\n} catch (error) {\n  throw new Error('Error enviando ticket de Prometheus a Logstash: ' + error.message);\n}\n\n// 4. Respuesta de éxito\nconst response = {\n  success: true,\n  ticket_number: ticket.ticket_number,\n  message: `Ticket de métricas ${ticket.ticket_number} enviado a Logstash exitosamente`,\n  details: {\n    priority: ticket.priority,\n    category: ticket.category,\n    rule_name: originalRuleName,\n    assigned_to: ticket.assigned_to,\n    timestamp: new Date().toISOString()\n  }\n};\n\nreturn [{ json: response }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        304,
+        368
+      ],
+      "id": "b5d811ef-eaf7-4c8f-9c9b-07f42e2de894",
+      "name": "Finalizar Proceso Prometheus/Alertmanager"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ticket = $('Insertar Ticket en BD').first().json; \nconst originalRuleName = $('Definir campo de origen').first().json.datos_originales.rule_name;\n\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: 'http://logstash:8080',\n    body: {\n      ...ticket,\n      rule_name: originalRuleName, \n      type: 'ticket_created',\n      source: 'n8n_ticket_system',\n      timestamp: new Date().toISOString()\n    },\n    json: true \n  });\n} catch (error) {\n  throw new Error('Error enviando ticket a Logstash: ' + error.message);\n}\n\nconst response = {\n  success: true,\n  ticket_number: ticket.ticket_number,\n  message: `Ticket ${ticket.ticket_number} creado exitosamente`,\n  details: {\n    priority: ticket.priority,\n    category: ticket.category,\n    rule_name: originalRuleName,\n    assigned_to: ticket.assigned_to,\n    timestamp: new Date().toISOString()\n  }\n};\n\nreturn [{ json: response }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -218,7 +245,102 @@
         176
       ],
       "id": "3246733b-0cdc-4a3a-980c-eeadf72b17b0",
-      "name": "Finalizar Proceso"
+      "name": "Finalizar Proceso N8N"
+    },
+    {
+      "parameters": {
+        "jsCode": "const alert = $json;\nconst alertname = alert.labels?.alertname || alert.commonLabels?.alertname || alert.groupLabels?.alertname || 'Unknown';\n\nconst mensajes = {\n  'IpBaneadaDetectada': {\n    title: `[BANEO] IPs baneadas en Jail: ${alert.labels?.jail || 'n8n-auth-jail'}`,\n    description: `Prometheus detectó IPs baneadas. Revisar tickets de logs para detalles.`,\n    priority: 'medium'\n  },\n  'Fail2banCaido': {\n    title: `[CRÍTICO] Fail2ban está caído`,\n    description: `El servicio fail2ban no responde. El sistema de bloqueo automático está inactivo.`,\n    priority: 'critical'\n  },\n  'AtaqueMasivo': {\n    title: `[ATAQUE MASIVO] Más de 10 IPs baneadas simultáneamente`,\n    description: `Prometheus detectó un volumen anormal de baneos. Posible ataque coordinado.`,\n    priority: 'critical'\n  }\n};\n\nconst info = mensajes[alertname] || {\n  title: `[ALERTA] ${alertname}`,\n  description: `Alerta de Prometheus: ${alertname}`,\n  priority: 'medium'\n};\n\nreturn {\n  json: {\n    ticket_number: 'TICKET-METRICA-' + Math.random().toString(36).substr(2, 6).toUpperCase(),\n    title: info.title,\n    description: info.description,\n    status: 'open',\n    priority: info.priority,\n    category: 'IPS/Metrics',\n    source_ip: 'Prometheus',\n    threat_score: info.priority === 'critical' ? 100 : 50,\n    assigned_to: 'security_team@example.com',\n    created_at: new Date().toISOString()\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -608,
+        224
+      ],
+      "id": "7f5f7186-c43c-43bc-b5b4-8245ce16bdc6",
+      "name": "Construir mensaje Prometheus"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || {};\n\n// Detectar el origen y lo guardamos en una palabra simple\nlet origen = \"otro\";\n\nif (body.alerts) {\n    origen = \"alertmanager\";\n} else if (body.rule_name) {\n    origen = \"workflow_logs\";\n}\n\n// Enviar la palabra limpia y los datos originales\nreturn {\n    origen_ticket: origen,\n    datos_originales: body\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1408,
+        80
+      ],
+      "id": "4768a3c7-4ec0-41b1-a1fe-3054935858fa",
+      "name": "Definir campo de origen"
+    },
+    {
+      "parameters": {
+        "fromEmail": "rafa.legendsss@gmail.com",
+        "toEmail": "rafa.legendsss@gmail.com",
+        "subject": "Generar alertas",
+        "emailFormat": "text",
+        "text": "=✅ ALERTA DE PROMETHEUS\nTicket: {{ $json.ticket_number }}\nTipo: {{ $json.title }}\nDescripción: {{ $json.description }}\nPrioridad: {{ $json.priority }}\nEstado: {{ $json.status }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        -160,
+        288
+      ],
+      "id": "ef5e483c-7f23-459c-9630-9fd124acd7b2",
+      "name": "Send email Alertmanager",
+      "webhookId": "206cd72e-9fa3-4777-96ac-96de3685a426",
+      "credentials": {
+        "smtp": {
+          "id": "SXAVnICwMTpNLbPk",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "-1003838665607",
+        "text": "=✅ ALERTA DE PROMETHEUS\nTicket: {{ $json.ticket_number }}\nTipo: {{ $json.title }}\nDescripción: {{ $json.description }}\nPrioridad: {{ $json.priority }}\nEstado: {{ $json.status }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -160,
+        448
+      ],
+      "id": "f57382ea-1f31-4116-8094-811994530251",
+      "name": "Telegram Alertmanager",
+      "webhookId": "63cd58c6-cae5-496b-a906-c552c8bd4892",
+      "credentials": {
+        "telegramApi": {
+          "id": "W1iVfTTyzWU5Idv0",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "-1003838665607",
+        "text": "=🚨 *NUEVO TICKET GENERADO* 🚨\n\n📌 *Prioridad:* {{ $json.priority }}\n📂 *Categoría:* {{ $json.category }}\n🌐 *IP:* {{ $json.source_ip }}\n📊 *Score:* {{ $json.threat_score }}\n👤 *Asignado:* {{ $json.assigned_to }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        16,
+        192
+      ],
+      "id": "f8e5ded2-bc74-406e-8ab0-b2ad7776e379",
+      "name": "Telegram Workflows de N8N",
+      "webhookId": "5e9f30f9-c258-43fe-b7e8-f5f266745e99",
+      "credentials": {
+        "telegramApi": {
+          "id": "W1iVfTTyzWU5Idv0",
+          "name": "Telegram account"
+        }
+      }
     },
     {
       "parameters": {
@@ -236,7 +358,7 @@
         0
       ],
       "id": "ef6f385d-65c0-4715-8a94-8f0de35bb664",
-      "name": "Send email",
+      "name": "Send email para workflows de N8N",
       "webhookId": "6b0a7bc7-0e9d-4669-ab6f-da7b843ae9ec",
       "credentials": {
         "smtp": {
@@ -244,19 +366,6 @@
           "name": "SMTP account"
         }
       }
-    },
-    {
-      "parameters": {
-        "jsCode": "const alert = $json;\nconst alertname = alert.labels?.alertname || alert.commonLabels?.alertname || alert.groupLabels?.alertname || 'Unknown';\n\nconst mensajes = {\n  'IpBaneadaDetectada': {\n    title: `[BANEO] IPs baneadas en Jail: ${alert.labels?.jail || 'n8n-auth-jail'}`,\n    description: `Prometheus detectó IPs baneadas. Revisar tickets de logs para detalles.`,\n    priority: 'medium'\n  },\n  'Fail2banCaido': {\n    title: `[CRÍTICO] Fail2ban está caído`,\n    description: `El servicio fail2ban no responde. El sistema de bloqueo automático está inactivo.`,\n    priority: 'critical'\n  },\n  'AtaqueMasivo': {\n    title: `[ATAQUE MASIVO] Más de 10 IPs baneadas simultáneamente`,\n    description: `Prometheus detectó un volumen anormal de baneos. Posible ataque coordinado.`,\n    priority: 'critical'\n  }\n};\n\nconst info = mensajes[alertname] || {\n  title: `[ALERTA] ${alertname}`,\n  description: `Alerta de Prometheus: ${alertname}`,\n  priority: 'medium'\n};\n\nreturn {\n  json: {\n    ticket_number: 'TICKET-METRICA-' + Math.random().toString(36).substr(2, 6).toUpperCase(),\n    title: info.title,\n    description: info.description,\n    status: 'open',\n    priority: info.priority,\n    category: 'IPS/Metrics',\n    source_ip: 'Prometheus',\n    threat_score: info.priority === 'critical' ? 100 : 50,\n    assigned_to: 'security_team@example.com',\n    created_at: new Date().toISOString()\n  }\n};"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -608,
-        224
-      ],
-      "id": "7f5f7186-c43c-43bc-b5b4-8245ce16bdc6",
-      "name": "Code in JavaScript"
     },
     {
       "parameters": {
@@ -317,103 +426,7 @@
         96
       ],
       "id": "67c81a94-e15c-4ebc-9b14-aaa8809abad1",
-      "name": "Switch"
-    },
-    {
-      "parameters": {
-        "jsCode": "const body = $input.first().json.body || {};\n\n// Detectamos el origen y lo guardamos en una palabra simple\nlet origen = \"otro\";\n\nif (body.alerts) {\n    origen = \"alertmanager\";\n} else if (body.rule_name) {\n    origen = \"workflow_logs\";\n}\n\n// Enviamos la palabra limpia y los datos originales\nreturn {\n    origen_ticket: origen,\n    datos_originales: body\n};"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -1408,
-        80
-      ],
-      "id": "4768a3c7-4ec0-41b1-a1fe-3054935858fa",
-      "name": "Code in JavaScript1"
-    },
-    {
-      "parameters": {
-        "fieldToSplitOut": "datos_originales.alerts",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.splitOut",
-      "typeVersion": 1,
-      "position": [
-        -864,
-        192
-      ],
-      "id": "ac3c98cb-e818-4738-a202-b87dc3870203",
-      "name": "Split Out"
-    },
-    {
-      "parameters": {
-        "chatId": "-1003838665607",
-        "text": "=🚨 *NUEVO TICKET GENERADO* 🚨\n\n📌 *Prioridad:* {{ $json.priority }}\n📂 *Categoría:* {{ $json.category }}\n🌐 *IP:* {{ $json.source_ip }}\n📊 *Score:* {{ $json.threat_score }}\n👤 *Asignado:* {{ $json.assigned_to }}",
-        "additionalFields": {}
-      },
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.2,
-      "position": [
-        16,
-        192
-      ],
-      "id": "f8e5ded2-bc74-406e-8ab0-b2ad7776e379",
-      "name": "Send a text message",
-      "webhookId": "5e9f30f9-c258-43fe-b7e8-f5f266745e99",
-      "credentials": {
-        "telegramApi": {
-          "id": "W1iVfTTyzWU5Idv0",
-          "name": "Telegram account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "chatId": "-1003838665607",
-        "text": "=✅ ALERTA DE PROMETHEUS\nTicket: {{ $json.ticket_number }}\nTipo: {{ $json.title }}\nDescripción: {{ $json.description }}\nPrioridad: {{ $json.priority }}\nEstado: {{ $json.status }}",
-        "additionalFields": {}
-      },
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.2,
-      "position": [
-        -144,
-        416
-      ],
-      "id": "f57382ea-1f31-4116-8094-811994530251",
-      "name": "Send a text message1",
-      "webhookId": "63cd58c6-cae5-496b-a906-c552c8bd4892",
-      "credentials": {
-        "telegramApi": {
-          "id": "W1iVfTTyzWU5Idv0",
-          "name": "Telegram account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "fromEmail": "rafa.legendsss@gmail.com",
-        "toEmail": "rafa.legendsss@gmail.com",
-        "subject": "Generar alertas",
-        "emailFormat": "text",
-        "text": "=✅ ALERTA DE PROMETHEUS\nTicket: {{ $json.ticket_number }}\nTipo: {{ $json.title }}\nDescripción: {{ $json.description }}\nPrioridad: {{ $json.priority }}\nEstado: {{ $json.status }}",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.emailSend",
-      "typeVersion": 2.1,
-      "position": [
-        -160,
-        288
-      ],
-      "id": "ef5e483c-7f23-459c-9630-9fd124acd7b2",
-      "name": "Send email1",
-      "webhookId": "206cd72e-9fa3-4777-96ac-96de3685a426",
-      "credentials": {
-        "smtp": {
-          "id": "SXAVnICwMTpNLbPk",
-          "name": "SMTP account"
-        }
-      }
+      "name": "Switch por origien (workflows de N8N o Alertmanager)"
     }
   ],
   "pinData": {},
@@ -422,7 +435,7 @@
       "main": [
         [
           {
-            "node": "Code in JavaScript1",
+            "node": "Definir campo de origen",
             "type": "main",
             "index": 0
           }
@@ -444,40 +457,89 @@
       "main": [
         [
           {
-            "node": "Send email",
+            "node": "Send email para workflows de N8N",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Send a text message",
+            "node": "Telegram Workflows de N8N",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Send email": {
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Construir mensaje Prometheus",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Construir mensaje Prometheus": {
+      "main": [
+        [
+          {
+            "node": "Send email Alertmanager",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Telegram Alertmanager",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Definir campo de origen": {
+      "main": [
+        [
+          {
+            "node": "Switch por origien (workflows de N8N o Alertmanager)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send email Alertmanager": {
       "main": [
         []
       ]
     },
-    "Code in JavaScript": {
+    "Telegram Alertmanager": {
       "main": [
         [
           {
-            "node": "Send email1",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Send a text message1",
+            "node": "Finalizar Proceso Prometheus/Alertmanager",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Switch": {
+    "Telegram Workflows de N8N": {
+      "main": [
+        [
+          {
+            "node": "Finalizar Proceso N8N",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send email para workflows de N8N": {
+      "main": [
+        []
+      ]
+    },
+    "Switch por origien (workflows de N8N o Alertmanager)": {
       "main": [
         [
           {
@@ -494,62 +556,13 @@
           }
         ]
       ]
-    },
-    "Code in JavaScript1": {
-      "main": [
-        [
-          {
-            "node": "Switch",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Split Out": {
-      "main": [
-        [
-          {
-            "node": "Code in JavaScript",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Send a text message": {
-      "main": [
-        [
-          {
-            "node": "Finalizar Proceso",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Send email1": {
-      "main": [
-        []
-      ]
-    },
-    "Send a text message1": {
-      "main": [
-        [
-          {
-            "node": "Finalizar Proceso",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
     }
   },
   "active": true,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "cb7ebaa1-2246-401e-92c1-893baa267736",
+  "versionId": "0f86e889-ee76-400d-bc9e-dbff37ff7635",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "7478c350e39689cddadf155b6c5aead67e0635cfe1aa4e6d60c18ecb354db193"
