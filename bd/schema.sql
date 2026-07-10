@@ -21,7 +21,8 @@ CREATE TABLE alerts (
     resolved_at TIMESTAMP,
     risk_score INTEGER,
     risk_level VARCHAR(20),
-    threat_reputation VARCHAR(50)
+    threat_reputation VARCHAR(50),
+    threat_intel JSONB                -- Contexto enriquecido de Threat Intel y GeoIP (is_private_ip, geo_info, confidence, tags)
 );
 
 -- Tabla de patrones de ataque detectados

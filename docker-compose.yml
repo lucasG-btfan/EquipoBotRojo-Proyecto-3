@@ -84,7 +84,8 @@ services:
       - NET_RAW
     volumes:
       - ./fail2ban_config/jail.local:/etc/fail2ban/jail.local:ro
-      - ./fail2ban_config/filter.d:/etc/fail2ban/filter.d:ro
+      - ./fail2ban_config/filter.d:/data/filter.d:ro
+      - ./fail2ban_config/action.d:/data/action.d:ro
       - ./logs:/var/log:ro
       - fail2ban_data:/var/run/fail2ban
       - fail2ban_db:/data

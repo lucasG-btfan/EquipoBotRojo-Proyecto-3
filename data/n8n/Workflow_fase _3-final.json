@@ -22,7 +22,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const logs = $input.all();\nconst rules = [\n  { id: 4, name: 'Root Login Attempt', pattern: 'Failed|authentication|root', severity: 'critical', threshold: 1, description: '¡Intento crítico de acceso como ROOT!' },\n  { id: 7, name: 'Access Denied', pattern: 'Access denied|denied|forbidden', severity: 'high', threshold: 1, description: 'Acceso denegado a recurso crítico' },\n  { id: 5, name: 'Port Scan', pattern: 'DPT=|scan|probe', severity: 'medium', threshold: 3, description: 'Posible escaneo de puertos' },\n  { id: 6, name: 'Service Restart', pattern: 'Started', severity: 'info', threshold: 1, description: 'Servicio iniciado/reiniciado' },\n  { id: 8, name: 'Kernel Oops', pattern: 'Oops', severity: 'critical', threshold: 1, description: 'Error crítico del Kernel detectado' },\n  { id: 1, name: 'SSH Failed Password', pattern: 'Failed password', severity: 'high', threshold: 1, description: 'Intento de acceso fallido SSH' },\n  { id: 2, name: 'Sudo Usage', pattern: 'sudo', severity: 'medium', threshold: 1, description: 'Uso de comando SUDO detectado' },\n  { id: 3, name: 'Iptables Drop', pattern: 'iptables.*DROP', severity: 'high', threshold: 1, description: 'Paquete bloqueado por Firewall' }\n];\n\nconst extractIP = (text) => {\n  const ipRegex = /\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b/;\n  const match = text.match(ipRegex);\n  return match ? match[0] : '127.0.0.1';\n};\n\nlet alerts = [];\n\n// Procesamos cada log de entrada individualmente\nlogs.forEach(item => {\n  const logRaw = item.json.raw;\n  const sourceIp = extractIP(logRaw);\n  \n  // Usamos un bucle for...of para poder usar 'break'\n  for (const rule of rules) {\n    const regex = new RegExp(rule.pattern, 'i');\n    if (regex.test(logRaw)) {\n      alerts.push({\n        json: {\n          rule_id: rule.id,\n          rule_name: rule.name,\n          severity: rule.severity,\n          category: (rule.severity === 'critical' || rule.severity === 'high') ? 'attack' : 'system',\n          source_ip: sourceIp,\n          target_host: 'server1',\n          description: rule.description,\n          raw_log: logRaw,\n          timestamp: new Date().toISOString()\n        }\n      });\n      // IMPORTANTE: Al encontrar la regla más específica, saltamos al siguiente log\n      break; \n    }\n  }\n});\n\nreturn alerts.length > 0 ? alerts : logs.map(l => ({\n  json: {\n    rule_name: 'Monitoring Active',\n    severity: 'info',\n    category: 'system',\n    description: 'Actividad de log estándar detectada',\n    source_ip: extractIP(l.json.raw || ''),\n    raw_log: l.json.raw\n  }\n}));"
+        "jsCode": "const logs = $input.all();\nconst rules = [\n  { id: 4, name: 'Root Login Attempt', pattern: 'Failed|authentication|root', severity: 'critical', category: 'attack', threshold: 1, description: '¡Intento crítico de acceso como ROOT!' },\n  { id: 7, name: 'Access Denied', pattern: 'Access denied|denied|forbidden', severity: 'high', category: 'attack', threshold: 1, description: 'Acceso denegado a recurso crítico' },\n  { id: 5, name: 'Port Scan', pattern: 'DPT=|scan|probe', severity: 'medium', category: 'attack', threshold: 3, description: 'Posible escaneo de puertos' },\n  { id: 6, name: 'Service Restart', pattern: 'Started', severity: 'info', category: 'system', threshold: 1, description: 'Servicio iniciado/reiniciado' },\n  { id: 8, name: 'Kernel Oops', pattern: 'Oops', severity: 'critical', category: 'system', threshold: 1, description: 'Error crítico del Kernel detectado' },\n  { id: 1, name: 'SSH Failed Password', pattern: 'Failed password', severity: 'high', category: 'attack', threshold: 1, description: 'Intento de acceso fallido SSH' },\n  { id: 2, name: 'Sudo Usage', pattern: 'sudo', severity: 'medium', category: 'system', threshold: 1, description: 'Uso de comando SUDO detectado' },\n  { id: 3, name: 'Iptables Drop', pattern: 'iptables.*DROP', severity: 'high', category: 'attack', threshold: 1, description: 'Paquete bloqueado por Firewall' }\n];\n\nconst extractIP = (text) => {\n  if (!text) return '127.0.0.1';\n  \n  // 1. Primera opción: Buscar \"from IP\" (Ideal para SSH, accesos, etc.)\n  const attackerMatch = text.match(/from\\s+(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})/i);\n  if (attackerMatch) return attackerMatch[1];\n\n  // 2. Segunda opción: Buscar \"SRC=IP\" (Esencial para Iptables / Firewalls)\n  const srcMatch = text.match(/SRC=(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})/i);\n  if (srcMatch) return srcMatch[1];\n\n  // 3. Respaldo: Si no hay patrones conocidos, tomamos la PRIMERA IP que aparezca (que suele ser el origen)\n  const allIpsRegex = /\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b/g;\n  const allMatches = text.match(allIpsRegex);\n  if (allMatches) return allMatches[0]; \n  \n  return '127.0.0.1';\n};\n\nlet alerts = [];\n\nlogs.forEach(item => {\n  const logRaw = item.json.raw;\n  const sourceIp = extractIP(logRaw);\n  \n  for (const rule of rules) {\n    const regex = new RegExp(rule.pattern, 'i');\n    if (regex.test(logRaw)) {\n      alerts.push({\n        json: {\n          rule_id: rule.id,\n          rule_name: rule.name,\n          severity: rule.severity,\n          category: rule.category, // <-- CORRECCIÓN: Toma la categoría explícita de la regla\n          source_ip: sourceIp,\n          target_host: 'server1',\n          description: rule.description,\n          raw_log: logRaw,\n          timestamp: new Date().toISOString()\n        }\n      });\n      break; \n    }\n  }\n});\n\nreturn alerts.length > 0 ? alerts : logs.map(l => ({\n  json: {\n    rule_name: 'Monitoring Active',\n    severity: 'info',\n    category: 'system',\n    description: 'Actividad de log estándar detectada',\n    source_ip: extractIP(l.json.raw || ''),\n    raw_log: l.json.raw\n  }\n}));"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -35,12 +35,12 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\n\nconst threatDB = {\n  '192.168.1.50': { reputation: 'malicious', tags: ['sql_injection', 'web_attack'], confidence: 0.85 },\n  '10.0.0.10': { reputation: 'suspicious', tags: ['port_scan'], confidence: 0.65 }\n};\n\nreturn items.map(item => {\n  const data = item.json;\n  data.raw_log = (data.raw_log || \"\").trim();\n  const ip = data.source_ip || '0.0.0.0';\n  \n  const isPrivateIP = ip.startsWith('10.') || \n                      ip.startsWith('192.168.') || \n                      (ip.startsWith('172.') && parseInt(ip.split('.')[1]) >= 16 && parseInt(ip.split('.')[1]) <= 31);\n\n  const threatInfo = threatDB[ip] || { reputation: 'unknown', tags: [], confidence: 0 };\n  \n  data.threat_intel = {\n    is_private_ip: isPrivateIP,\n    threat_info: threatInfo,\n    geo_info: { country: isPrivateIP ? 'INTERNAL' : 'UNKNOWN', asn: 'N/A' },\n    enrichment_timestamp: new Date().toISOString()\n  };\n\n  let riskScore = 0;\n  switch(data.severity) {\n    case 'critical': riskScore = 90; break;\n    case 'high': riskScore = 70; break;\n    case 'medium': riskScore = 50; break;\n    default: riskScore = 30;\n  }\n\n  if (threatInfo.reputation === 'malicious') riskScore += 20;\n  else if (threatInfo.reputation === 'suspicious') riskScore += 10;\n  \n  data.risk_score = Math.min(100, riskScore);\n  data.risk_level = data.risk_score >= 80 ? 'CRITICAL' : \n                    data.risk_score >= 60 ? 'HIGH' : \n                    data.risk_score >= 40 ? 'MEDIUM' : 'LOW';\n\n    // Extraemos el host del log (que está después de la fecha)\n  const logParts = data.raw_log.split(' ');\n  data.source_host = logParts[3] || 'unknown-host'; \n\n  // El target_host suele ser el servidor donde corre el servicio\n  data.target_host = 'server1';\n  data.ip_address = data.source_ip; // El dashboard busca ip_address\n  data.is_active = (data.risk_level === 'CRITICAL' || data.risk_level === 'HIGH');\n  return { json: data };\n});"
+        "jsCode": "// 1. Data del nodo anterior directo (Resultados de la API GeoIP)\nconst geoResults = $input.all();\n\n// 2. Data recuperada del historial de N8N\nconst originalAlerts = $('Detectar Amenazas').all();\nconst dbResults = $('Obtener informacion de la reputacion de la IP').all();\n\nreturn originalAlerts.map((item, index) => {\n  const data = { ...item.json };\n  \n  // Extraemos las filas correspondientes al mismo índice\n  const dbRow = dbResults[index]?.json || {};\n  const geoRow = geoResults[index]?.json || {};\n\n  data.raw_log = (data.raw_log || \"\").trim();\n  const ip = data.source_ip || '127.0.0.1';\n  \n  const isPrivateIP = ip.startsWith('10.') || \n                      ip.startsWith('192.168.') || \n                      (ip.startsWith('172.') && parseInt(ip.split('.')[1]) >= 16 && parseInt(ip.split('.')[1]) <= 31) ||\n                      ip === '127.0.0.1';\n\n  // --- LÓGICA DE REPUTACIÓN INTERNA ---\n  const totalOccurrences = Number(dbRow.total_occurrences) || 0;\n  const hasBeenBlocked = dbRow.has_been_blocked || false;\n  \n  let calculatedReputation = 'unknown';\n  if (hasBeenBlocked === true || totalOccurrences >= 10) {\n      calculatedReputation = 'malicious';\n  } else if (totalOccurrences >= 3) {\n      calculatedReputation = 'suspicious';\n  }\n\n  const threatInfo = { \n      reputation: calculatedReputation, \n      tags: hasBeenBlocked ? ['known_attacker'] : [], \n      confidence: totalOccurrences > 0 ? 0.8 : 0 \n  };\n  \n  // --- ENRIQUECIMIENTO GEOIP REAL ---\n  let countryName = 'UNKNOWN';\n  let asnName = 'N/A';\n\n  if (isPrivateIP) {\n    countryName = 'INTERNAL';\n  } else if (geoRow.status === 'success') {\n    countryName = geoRow.country || 'UNKNOWN';\n    asnName = geoRow.as || 'N/A';\n  }\n  // -----------------------------------\n  \n  data.threat_intel = {\n    is_private_ip: isPrivateIP,\n    threat_info: threatInfo,\n    geo_info: { country: countryName, asn: asnName },\n    enrichment_timestamp: new Date().toISOString()\n  };\n\n  // Cálculo de Risk Score\n  let riskScore = 0;\n  switch(data.severity) {\n    case 'critical': riskScore = 90; break;\n    case 'high': riskScore = 70; break;\n    case 'medium': riskScore = 50; break;\n    default: riskScore = 30;\n  }\n\n  if (threatInfo.reputation === 'malicious') riskScore += 20;\n  else if (threatInfo.reputation === 'suspicious') riskScore += 10;\n  \n  data.risk_score = Math.min(100, riskScore);\n  data.risk_level = data.risk_score >= 80 ? 'CRITICAL' : \n                    data.risk_score >= 60 ? 'HIGH' : \n                    data.risk_score >= 40 ? 'MEDIUM' : 'LOW';\n\n  const hostMatch = data.raw_log.match(/\\[ALERT\\]\\s+([a-zA-Z0-9_\\-]+:)/);\n  data.source_host = hostMatch ? hostMatch[1] : 'unknown-host';\n\n  data.target_host = 'server1';\n  data.ip_address = data.source_ip; \n  data.is_active = (data.risk_level === 'CRITICAL' || data.risk_level === 'HIGH');\n\n  return { json: data };\n});"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        32,
+        448,
         144
       ],
       "id": "6e28bd89-490e-4c30-8e92-e2163a79f059",
@@ -53,7 +53,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        496,
+        912,
         864
       ],
       "id": "abd3e1ca-0d7b-47f5-a5ef-0a5c3057fad6",
@@ -66,7 +66,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1024,
+        1648,
         16
       ],
       "id": "1548fad9-57f6-4918-acd6-d29bfa269c72",
@@ -79,7 +79,7 @@
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        1696,
+        2320,
         464
       ],
       "id": "cd7ef903-0f64-4e08-9520-b732ea81deb4",
@@ -143,7 +143,8 @@
             "risk_level": "={{ $json.risk_level }}",
             "threat_reputation": "={{ $json.threat_intel.threat_info.reputation }}",
             "target_host": "={{ $json.target_host }}",
-            "source_host": "={{ $json.source_host }}"
+            "source_host": "={{ $json.source_host }}",
+            "threat_intel": "={{ $json.threat_intel }}"
           },
           "matchingColumns": [
             "id"
@@ -304,6 +305,16 @@
               "display": true,
               "type": "string",
               "canBeUsedToMatch": true
+            },
+            {
+              "id": "threat_intel",
+              "displayName": "threat_intel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": true,
+              "removed": false
             }
           ],
           "attemptToConvertTypes": false,
@@ -314,8 +325,8 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        832,
-        0
+        1136,
+        16
       ],
       "id": "1bbb361c-cd5e-44b6-8e19-cf9e871033d6",
       "name": "Registrar alerta",
@@ -333,13 +344,13 @@
         "url": "http://localhost:5678/webhook/create-ticket",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"rule_name\": \"{{ $json.rule_name }}\",\n  \"source_ip\": \"{{ $json.source_ip }}\",\n  \"risk_score\": {{ $json.risk_score }},\n  \"description\": \"{{ $json.description }}\",\n  \"threat_intel\": {{ JSON.stringify($json.threat_intel) }},\n  \"severity\": \"{{ $json.severity }}\"\n}",
+        "jsonBody": "={\n  \"rule_name\": \"{{ $('Switch por severidad').item.json.rule_name }}\",\n  \"source_ip\": \"{{ $json.source_ip }}\",\n  \"risk_score\": {{ $json.risk_score }},\n  \"description\": \"{{ $json.description }}\",\n  \"threat_intel\": {{ JSON.stringify($json.threat_intel) }},\n  \"severity\": \"{{ $json.severity }}\",\n  \"alert_reference\":{{ $('Registrar alerta').item.json.id }}\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        928,
+        1552,
         192
       ],
       "id": "38de0180-f7af-419c-b3f7-e6579a3b9f8e",
@@ -371,6 +382,10 @@
             {
               "name": "risk_score",
               "value": "={{ $json.risk_score }}"
+            },
+            {
+              "name": "category",
+              "value": "={{ $json.category }}"
             }
           ]
         },
@@ -379,7 +394,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        752,
+        1168,
         400
       ],
       "id": "940a26ec-8f2c-4c6c-afbc-3b8615da0186",
@@ -397,7 +412,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        688,
+        1104,
         592
       ],
       "id": "60f33dfa-35a6-40d7-857e-d8a391a88c4a",
@@ -410,7 +425,7 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        1376,
+        2000,
         320
       ],
       "id": "2bc5aba4-972a-4881-a39e-62ab8ef507e5",
@@ -425,7 +440,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        880,
+        1296,
         -192
       ],
       "id": "5df76772-ccc5-4c10-9957-d25c5bf3db67",
@@ -436,73 +451,6 @@
           "name": "Postgres account"
         }
       }
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "98293be9-ab22-49ce-87fd-82f3d95f1339",
-              "leftValue": "={{ $json.risk_score }}",
-              "rightValue": 70,
-              "operator": {
-                "type": "number",
-                "operation": "gte"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.filter",
-      "typeVersion": 2.2,
-      "position": [
-        704,
-        128
-      ],
-      "id": "80035ea6-081d-44d8-a6e0-313ef2e4d3eb",
-      "name": "Filtro de risk_score para tickets"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "a6bf72af-2769-405a-b7c7-892bfba6ecd8",
-              "leftValue": "={{ $json.data }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "empty",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        -1120,
-        144
-      ],
-      "id": "5babc901-a988-404c-af2b-e90e22016822",
-      "name": "If"
     },
     {
       "parameters": {
@@ -558,7 +506,7 @@
       "type": "n8n-nodes-base.filter",
       "typeVersion": 2.2,
       "position": [
-        496,
+        912,
         480
       ],
       "id": "b9735f35-359d-4387-a177-5ad18ca57025",
@@ -592,7 +540,7 @@
       "type": "n8n-nodes-base.filter",
       "typeVersion": 2.2,
       "position": [
-        368,
+        784,
         -32
       ],
       "id": "b0128774-17f7-41c1-b5b2-f242a48fb7d7",
@@ -654,11 +602,113 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.3,
       "position": [
-        256,
+        672,
         144
       ],
       "id": "f0605a7f-45e8-4aac-9e4a-1c631a0a25a8",
       "name": "Switch por severidad"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n    COALESCE(SUM(occurrence_count), 0) as total_occurrences,\n    COALESCE(BOOL_OR(is_blocked), false) as has_been_blocked\nFROM attack_patterns \nWHERE source_ip = '{{ $json.source_ip }}';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        32,
+        144
+      ],
+      "id": "0e2dba52-a642-42f6-b235-06578bf1691a",
+      "name": "Obtener informacion de la reputacion de la IP",
+      "credentials": {
+        "postgres": {
+          "id": "fxbYllSjTFqyrT5U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a6bf72af-2769-405a-b7c7-892bfba6ecd8",
+              "leftValue": "={{ $json.data }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1120,
+        144
+      ],
+      "id": "5babc901-a988-404c-af2b-e90e22016822",
+      "name": "Hay alertas?"
+    },
+    {
+      "parameters": {
+        "url": "=http://ip-api.com/json/{{ $('Detectar Amenazas').item.json.source_ip }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        240,
+        144
+      ],
+      "id": "c5a578d1-6e5c-47c3-9e43-3b4bb824dd5d",
+      "name": "HTTP GeoIP"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "98293be9-ab22-49ce-87fd-82f3d95f1339",
+              "leftValue": "={{ $json.risk_score }}",
+              "rightValue": 70,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        1344,
+        160
+      ],
+      "id": "80035ea6-081d-44d8-a6e0-313ef2e4d3eb",
+      "name": "Filtro de risk_score para tickets"
     }
   ],
   "pinData": {},
@@ -678,7 +728,7 @@
       "main": [
         [
           {
-            "node": "Enriquecimiento Threat Intel",
+            "node": "Obtener informacion de la reputacion de la IP",
             "type": "main",
             "index": 0
           }
@@ -705,7 +755,7 @@
       "main": [
         [
           {
-            "node": "If",
+            "node": "Hay alertas?",
             "type": "main",
             "index": 0
           }
@@ -728,6 +778,11 @@
         [
           {
             "node": "Nodo 9: Resumen",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Filtro de risk_score para tickets",
             "type": "main",
             "index": 0
           }
@@ -811,35 +866,6 @@
         ]
       ]
     },
-    "Filtro de risk_score para tickets": {
-      "main": [
-        [
-          {
-            "node": "Crear ticket",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "If": {
-      "main": [
-        [
-          {
-            "node": "Sin alertas",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Estructurar Entradas de Log",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Estructurar Entradas de Log": {
       "main": [
         [
@@ -879,11 +905,6 @@
             "node": "Execute a SQL query",
             "type": "main",
             "index": 0
-          },
-          {
-            "node": "Filtro de risk_score para tickets",
-            "type": "main",
-            "index": 0
           }
         ]
       ]
@@ -910,13 +931,64 @@
           }
         ]
       ]
+    },
+    "Obtener informacion de la reputacion de la IP": {
+      "main": [
+        [
+          {
+            "node": "HTTP GeoIP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hay alertas?": {
+      "main": [
+        [
+          {
+            "node": "Sin alertas",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Estructurar Entradas de Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP GeoIP": {
+      "main": [
+        [
+          {
+            "node": "Enriquecimiento Threat Intel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtro de risk_score para tickets": {
+      "main": [
+        [
+          {
+            "node": "Crear ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "34f2488f-ad17-46af-86c2-b15bfc15fb0c",
+  "versionId": "3f43e09c-c5b5-4738-8f4f-e8ba58a2a821",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "7478c350e39689cddadf155b6c5aead67e0635cfe1aa4e6d60c18ecb354db193"

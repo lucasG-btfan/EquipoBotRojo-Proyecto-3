@@ -42,7 +42,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const alert = $input.first().json.body || $input.first().json;\n\nconst threatScore = alert.threat_score || alert.risk_score || 0;\nconst severity = alert.severity || 'medium';\n\nlet blockedUntil = new Date();\n\nif (threatScore >= 80 || severity === 'critical') {\n  blockedUntil.setDate(blockedUntil.getDate() + 30);\n} else if (threatScore >= 60 || severity === 'high') {\n  blockedUntil.setHours(blockedUntil.getHours() + 24);\n} else {\n  return [{\n    json: {\n      ...alert,\n      block_decision: 'no_block',\n      reason: 'Umbral no alcanzado'\n    }\n  }];\n}\n\nalert.blocked_until = blockedUntil.toISOString();\nalert.block_decision = 'block';\nalert.block_timestamp = new Date().toISOString();\n\nconst isPrivateIP = alert.source_ip.startsWith('10.') || \n                   alert.source_ip.startsWith('192.168.') || \n                   alert.source_ip.startsWith('172.16.');\n\nalert.is_private_ip = isPrivateIP;\n\nalert.firewall_action = isPrivateIP ? 'log_only' : 'block';\n\nreturn [{\n  json: alert\n}];"
+        "jsCode": "const alert = $input.first().json.body || $input.first().json;\nconst riskScore = alert.risk_score || 0;\nconst severity = alert.severity || 'medium';\nconst category = alert.category || 'system';\n\nlet blockedUntil = new Date();\nlet jailType = 'none'; // Usaremos esto para el log\n\n// Lógica unificada con el cálculo de riesgo\nif (riskScore >= 80 || severity === 'critical') {\n  blockedUntil.setDate(blockedUntil.getDate() + 30);\n  jailType = 'critical'; \n} else if (riskScore >= 60 || severity === 'high') {\n  blockedUntil.setHours(blockedUntil.getHours() + 24);\n  jailType = 'high'; // <--- Ahora irá a la nueva cárcel HIGH\n} else if (riskScore >= 40 || severity === 'medium') {\n  blockedUntil.setTime(blockedUntil.getTime() + 30 * 60 * 1000); // 30 min en ms\n  jailType = 'medium';\n} else {\n  return [{ json: { ...alert, block_decision: 'no_block', reason: 'Umbral no alcanzado' } }];\n}\n\nalert.blocked_until = blockedUntil.toISOString();\nalert.block_decision = 'block';\nalert.block_timestamp = new Date().toISOString();\nalert.jail_type = jailType; // ESTO ES CLAVE PARA EL LOG\nalert.firewall_action = 'block';\nalert.reason = 'Intrusión perimetral confirmada: ' + alert.rule_name;\n\nreturn [{ json: alert }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -88,7 +88,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const result = $input.first().json;\n\nconst report = {\n  timestamp: new Date().toISOString(),\n  action: 'ip_blocking',\n  status: result.block_decision === 'block' ? 'blocked' : 'not_blocked',\n  details: {\n    ip: result.source_ip,\n    threat_score: result.threat_score,\n    severity: result.severity,\n    reason: result.reason,\n    blocked_until: result.blocked_until,\n    firewall_executed: result.firewall_executed || false\n  },\n  workflow: 'auto_blocking_v1'\n};\n\nconsole.log('Reporte de bloqueo:', JSON.stringify(report, null, 2));\n\nif (result.block_decision === 'block') {\n  try {\n    await $http.post({\n      url: 'http://logstash:8080',\n      body: {\n        ...report,\n        type: 'ip_block_event',\n        source: 'n8n_auto_block'\n      },\n      headers: { 'Content-Type': 'application/json' }\n    });\n  } catch (error) {\n    console.log('Error enviando a Logstash:', error.message);\n  }\n}\n\nreturn [{ json: report }];"
+        "jsCode": "// Forzamos a n8n a leer del nodo original de decisión\nconst result = $('¿Bloquear?').item.json;\n\nconst isBlocked = result.block_decision === 'block';\n\nconst report = {\n  type: 'ip_block_event',\n  timestamp: new Date().toISOString(),\n  action: 'ip_blocking',\n  status: isBlocked ? 'blocked' : 'not_blocked',\n  severity: result.severity,        \n  category: result.rule_name,\n  \n  // 🛠️ ALIAS PARA EL DASHBOARD: Mapeamos los campos exactos que pide el gráfico roto\n  ip_address: result.source_ip, \n  is_active: isBlocked, // Mandamos true si fue bloqueado, false si no\n  \n  details: {\n    ip: result.source_ip,\n    threat_score: result.risk_score,\n    reason: result.reason || 'Alerta crítica detectada', \n    blocked_until: result.blocked_until,\n    firewall_executed: true          \n  },\n  workflow: 'auto_blocking_v1'\n};\n\nconsole.log('Reporte con campos de compatibilidad:', JSON.stringify(report, null, 2));\n\nreturn [{ json: report }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -101,7 +101,7 @@
     },
     {
       "parameters": {
-        "command": "=echo \"$(date) [ALERTA SEGURIDAD] BLOQUEAR IP: {{ $('¿Bloquear?').item.json.source_ip }}\" >> /home/node/logs/security/fail2ban.log"
+        "command": "=mkdir -p /home/node/logs/security/ && echo \"$(date) [ALERTA SEGURIDAD] BLOQUEAR IP: {{ $('¿Bloquear?').item.json.source_ip }} - tag=BAN_{{ $('¿Bloquear?').item.json.jail_type.toUpperCase() }}\" >> /home/node/logs/security/fail2ban.log"
       },
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
@@ -111,6 +111,24 @@
       ],
       "id": "4296c380-8b43-49b5-beda-4239e1cac0eb",
       "name": "Escribir archivo que lee Fail2ban para baneos"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://logstash:8080",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        400,
+        384
+      ],
+      "id": "77a8762d-f6ab-4270-9930-f7ae4089e96e",
+      "name": "HTTP Request"
     }
   ],
   "pinData": {},
@@ -176,13 +194,24 @@
           }
         ]
       ]
+    },
+    "Generar Reporte": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "24b8219e-1245-4461-ae1f-61e21fe79baa",
+  "versionId": "1799502b-f985-49a7-93f2-2fbd74785c1f",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "7478c350e39689cddadf155b6c5aead67e0635cfe1aa4e6d60c18ecb354db193"

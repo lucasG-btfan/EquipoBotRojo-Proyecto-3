@@ -1,0 +1,99 @@
+{
+  "name": "Anotar desbaneo en BD",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "fail2ban-unban",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "7f70d28e-828e-4114-88c1-322ee1e39d33",
+      "name": "Webhook",
+      "webhookId": "a911ef88-303d-458b-b705-654d2defbe21"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE blocked_ips \nSET is_active = false\nWHERE ip_address = '{{ $json.body.ip }}';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        208,
+        0
+      ],
+      "id": "ab912991-d404-4d25-89bd-f2ac9aef45b3",
+      "name": "Cambiar is_active de blocked_ips",
+      "credentials": {
+        "postgres": {
+          "id": "fxbYllSjTFqyrT5U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE security_tickets \nSET status = 'resolved', \n    updated_at = NOW() \nWHERE source_ip = '{{ $('Webhook').item.json.body.ip }}' \nAND status != 'resolved';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        416,
+        0
+      ],
+      "id": "7ba0a682-4f83-4423-8308-2eeaa53db76d",
+      "name": "Cambiar estado de ticket a 'resolved'",
+      "credentials": {
+        "postgres": {
+          "id": "fxbYllSjTFqyrT5U",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Cambiar is_active de blocked_ips",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cambiar is_active de blocked_ips": {
+      "main": [
+        [
+          {
+            "node": "Cambiar estado de ticket a 'resolved'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "ec275b5d-40c1-4e17-a3bb-ccdf952b5958",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7478c350e39689cddadf155b6c5aead67e0635cfe1aa4e6d60c18ecb354db193"
+  },
+  "id": "BOKa87UsdZCW0BOC",
+  "tags": []
+}

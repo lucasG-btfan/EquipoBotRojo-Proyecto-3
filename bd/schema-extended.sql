@@ -22,10 +22,12 @@ CREATE TABLE IF NOT EXISTS security_tickets (
     assigned_to VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    alert_reference JSONB
+    alert_reference INTEGER,
+    FOREIGN KEY (alert_reference) REFERENCES alerts(id) ON DELETE SET NULL
 );
 
 CREATE INDEX idx_blocked_ips_active ON blocked_ips(is_active);
 CREATE INDEX idx_blocked_ips_until ON blocked_ips(blocked_until);
 CREATE INDEX idx_tickets_status ON security_tickets(status);
 CREATE INDEX idx_tickets_priority ON security_tickets(priority);
+CREATE INDEX idx_tickets_alert_ref ON security_tickets(alert_reference);

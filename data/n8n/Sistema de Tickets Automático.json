@@ -19,7 +19,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json.datos_originales || $input.first().json;\n\n// 1. Extraer la IP atacante\nconst sourceIp = input.source_ip || \"0.0.0.0\";\n\n// 2. Sincronizar Prioridad con el Score (70 = HIGH)\nconst score = input.risk_score || 0;\nconst finalPriority = score >= 80 ? 'critical' : score >= 60 ? 'high' : 'medium';\n\nreturn [{\n    json: {\n        ticket_number: 'TICKET-LOG-' + Math.random().toString(36).substr(2, 6).toUpperCase(),\n        title: `[DETECCIÓN] ${input.rule_name || \"Ataque SSH\"}`,\n        description: `Fallo de login detectado desde ${sourceIp}`,\n        status: 'open',\n        priority: $('Definir campo de origen').first().json.datos_originales.severity,\n        category: `HIDS/Logs-${input.rule_name}`,\n        source_ip: sourceIp,\n        threat_score: score,\n        assigned_to: 'rafa.legendsss@gmail.com',\n        created_at: new Date().toISOString(),\n        // 3. RELLENAR ALERT_REFERENCE (para que no salga null)\n        alert_reference: input.threat_intel || { info: \"No intel data\" }\n    }\n}];"
+        "jsCode": "const input = $input.first().json.datos_originales || $input.first().json;\n\n// 1. Extraer la IP atacante\nconst sourceIp = input.source_ip || \"0.0.0.0\";\n\n// 2. Sincronizar Prioridad con el Score (70 = HIGH)\nconst score = input.risk_score || 0;\nconst finalPriority = score >= 80 ? 'critical' : score >= 60 ? 'high' : 'medium';\n\nreturn [{\n    json: {\n        ticket_number: 'TICKET-LOG-' + Math.random().toString(36).substr(2, 6).toUpperCase(),\n        title: `[DETECCIÓN] ${input.rule_name || \"Ataque SSH\"}`,\n        description: input.description,\n        status: 'open',\n        priority: $('Definir campo de origen').first().json.datos_originales.severity,\n        category: `HIDS/Logs-${input.rule_name}`,\n        source_ip: sourceIp,\n        threat_score: score,\n        assigned_to: 'rafa.legendsss@gmail.com',\n        created_at: new Date().toISOString(),\n        // 3. RELLENAR ALERT_REFERENCE (para que no salga null)\n        alert_reference: input.alert_reference\n    }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -69,7 +69,7 @@
             {
               "id": "ticket_number",
               "displayName": "ticket_number",
-              "required": false,
+              "required": true,
               "defaultMatch": false,
               "display": true,
               "type": "string",
@@ -167,22 +167,22 @@
               "removed": false
             },
             {
-              "id": "alert_reference",
-              "displayName": "alert_reference",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "object",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
               "id": "updated_at",
               "displayName": "updated_at",
               "required": false,
               "defaultMatch": false,
               "display": true,
               "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "alert_reference",
+              "displayName": "alert_reference",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
               "canBeUsedToMatch": true,
               "removed": false
             }
@@ -249,7 +249,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const alert = $json;\nconst alertname = alert.labels?.alertname || alert.commonLabels?.alertname || alert.groupLabels?.alertname || 'Unknown';\n\nconst mensajes = {\n  'IpBaneadaDetectada': {\n    title: `[BANEO] IPs baneadas en Jail: ${alert.labels?.jail || 'n8n-auth-jail'}`,\n    description: `Prometheus detectó IPs baneadas. Revisar tickets de logs para detalles.`,\n    priority: 'medium'\n  },\n  'Fail2banCaido': {\n    title: `[CRÍTICO] Fail2ban está caído`,\n    description: `El servicio fail2ban no responde. El sistema de bloqueo automático está inactivo.`,\n    priority: 'critical'\n  },\n  'AtaqueMasivo': {\n    title: `[ATAQUE MASIVO] Más de 10 IPs baneadas simultáneamente`,\n    description: `Prometheus detectó un volumen anormal de baneos. Posible ataque coordinado.`,\n    priority: 'critical'\n  }\n};\n\nconst info = mensajes[alertname] || {\n  title: `[ALERTA] ${alertname}`,\n  description: `Alerta de Prometheus: ${alertname}`,\n  priority: 'medium'\n};\n\nreturn {\n  json: {\n    ticket_number: 'TICKET-METRICA-' + Math.random().toString(36).substr(2, 6).toUpperCase(),\n    title: info.title,\n    description: info.description,\n    status: 'open',\n    priority: info.priority,\n    category: 'IPS/Metrics',\n    source_ip: 'Prometheus',\n    threat_score: info.priority === 'critical' ? 100 : 50,\n    assigned_to: 'security_team@example.com',\n    created_at: new Date().toISOString()\n  }\n};"
+        "jsCode": "const input = $input.all();\nconst alert = input[0].json;\n\nconst alertname = alert.labels?.alertname || \n                  alert.commonLabels?.alertname || \n                  alert.groupLabels?.alertname || \n                  'Unknown';\n\nconst mensajes = {\n  'IpBaneadaDetectada': {\n    title: `[BANEO] IPs baneadas en Jail: ${alert.labels?.jail || 'n8n-auth-jail'}`,\n    description: `Prometheus detectó IPs baneadas. Revisar tickets de logs para detalles.`,\n    priority: 'medium'\n  },\n  'Fail2banCaido': {\n    title: `[CRÍTICO] Fail2ban está caído`,\n    description: `El servicio fail2ban no responde. El sistema de bloqueo automático está inactivo.`,\n    priority: 'critical'\n  },\n  'AtaqueMasivo': {\n    title: `[ATAQUE MASIVO] Más de 10 IPs baneadas simultáneamente`,\n    description: `Prometheus detectó un volumen anormal de baneos. Posible ataque coordinado.`,\n    priority: 'critical'\n  }\n};\n\nconst info = mensajes[alertname] || {\n  title: `[ALERTA] ${alertname}`,\n  description: `Alerta de Prometheus: ${alertname}`,\n  priority: 'medium'\n};\n\nreturn {\n  json: {\n    ticket_number: 'TICKET-METRICA-' + Math.random().toString(36).substr(2, 6).toUpperCase(),\n    title: info.title,\n    description: info.description,\n    status: info.priority === 'critical' ? 'urgent' : 'open',\n    priority: info.priority,\n    category: 'IPS/Metrics',\n    source_ip: 'Prometheus',\n    threat_score: info.priority === 'critical' ? 100 : 50,\n    assigned_to: 'security_team@example.com',\n    created_at: new Date().toISOString(),\n    alert_reference: null\n  }\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -323,7 +323,7 @@
     {
       "parameters": {
         "chatId": "-1003838665607",
-        "text": "=🚨 *NUEVO TICKET GENERADO* 🚨\n\n📌 *Prioridad:* {{ $json.priority }}\n📂 *Categoría:* {{ $json.category }}\n🌐 *IP:* {{ $json.source_ip }}\n📊 *Score:* {{ $json.threat_score }}\n👤 *Asignado:* {{ $json.assigned_to }}",
+        "text": "=🚨 *NUEVO TICKET GENERADO* 🚨\n   ID: {{ $json.id }}\n   Título: {{ $json.title }}\n   Descripción: {{ $json.description }}\n\n📌 *Prioridad:* {{ $json.priority }}\n📂 *Categoría:* {{ $json.category }}\n🌐 *IP:* {{ $json.source_ip }}\n📊 *Score:* {{ $json.threat_score }}\n👤 *Asignado:* {{ $json.assigned_to }}",
         "additionalFields": {}
       },
       "type": "n8n-nodes-base.telegram",
@@ -348,7 +348,7 @@
         "toEmail": "rafa.legendsss@gmail.com",
         "subject": "Generar alertas",
         "emailFormat": "text",
-        "text": "=Alerta de Seguridad - Nuevo Ticket Detectado ID: {{ $json.id }} IP Maliciosa: {{ $json.source_ip }} Riesgo: {{ $json.risk_score }} Categoría: {{ $json.category }}",
+        "text": "=🚨 *NUEVO TICKET GENERADO* 🚨\n   ID: {{ $json.id }}\n   Título: {{ $json.title }}\n   Descripción: {{ $json.description }}\n\n📌 *Prioridad:* {{ $json.priority }}\n📂 *Categoría:* {{ $json.category }}\n🌐 *IP:* {{ $json.source_ip }}\n📊 *Score:* {{ $json.threat_score }}\n👤 *Asignado:* {{ $json.assigned_to }}",
         "options": {}
       },
       "type": "n8n-nodes-base.emailSend",
@@ -427,6 +427,189 @@
       ],
       "id": "67c81a94-e15c-4ebc-9b14-aaa8809abad1",
       "name": "Switch por origien (workflows de N8N o Alertmanager)"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "security_tickets",
+          "mode": "list",
+          "cachedResultName": "security_tickets"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "threat_score": "={{ $json.threat_score }}",
+            "ticket_number": "={{ $json.ticket_number }}",
+            "title": "={{ $json.title }}",
+            "description": "={{ $json.description }}",
+            "status": "={{ $json.status }}",
+            "priority": "={{ $json.priority }}",
+            "category": "={{ $json.category }}",
+            "source_ip": "={{ $json.source_ip }}",
+            "assigned_to": "={{ $json.assigned_to }}",
+            "created_at": "={{ $json.created_at }}",
+            "alert_reference": "={{ $('Definir campo de origen').item.json.datos_originales }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "ticket_number",
+              "displayName": "ticket_number",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "priority",
+              "displayName": "priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "category",
+              "displayName": "category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "source_ip",
+              "displayName": "source_ip",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "threat_score",
+              "displayName": "threat_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "assigned_to",
+              "displayName": "assigned_to",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "updated_at",
+              "displayName": "updated_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "alert_reference",
+              "displayName": "alert_reference",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -144,
+        640
+      ],
+      "id": "2e48e2e3-65d1-4757-8db8-a898816023cd",
+      "name": "Insertar Ticket en BD1",
+      "credentials": {
+        "postgres": {
+          "id": "fxbYllSjTFqyrT5U",
+          "name": "Postgres account"
+        }
+      }
     }
   ],
   "pinData": {},
@@ -490,6 +673,11 @@
           },
           {
             "node": "Telegram Alertmanager",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Insertar Ticket en BD1",
             "type": "main",
             "index": 0
           }
@@ -562,7 +750,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "0f86e889-ee76-400d-bc9e-dbff37ff7635",
+  "versionId": "5f158691-2cf3-4c9c-aba8-4ee765c15d82",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "7478c350e39689cddadf155b6c5aead67e0635cfe1aa4e6d60c18ecb354db193"
