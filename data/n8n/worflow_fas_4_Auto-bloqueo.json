@@ -101,7 +101,7 @@
     },
     {
       "parameters": {
-        "command": "=mkdir -p /home/node/logs/security/ && echo \"$(date) [ALERTA SEGURIDAD] BLOQUEAR IP: {{ $('¿Bloquear?').item.json.source_ip }} - tag=BAN_{{ $('¿Bloquear?').item.json.jail_type.toUpperCase() }}\" >> /home/node/logs/security/fail2ban.log"
+        "command": "=mkdir -p /home/node/logs/security/ && sh -c \"echo \\\"$(date) [ALERTA SEGURIDAD] BLOQUEAR IP: {{ $('¿Bloquear?').item.json.source_ip }}\\\" >> /home/node/logs/security/fail2ban.log\""
       },
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
@@ -164,13 +164,7 @@
             "index": 0
           }
         ],
-        [
-          {
-            "node": "Generar Reporte",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        []
       ]
     },
     "Insertar IP Bloqueada": {
@@ -211,7 +205,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "1799502b-f985-49a7-93f2-2fbd74785c1f",
+  "versionId": "4f5f438f-c979-4d77-9464-99b33ae14eee",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "7478c350e39689cddadf155b6c5aead67e0635cfe1aa4e6d60c18ecb354db193"

@@ -1,32 +1,21 @@
 [DEFAULT]
+# Importante para que no nos banee haciendo pruebas
 ignoreip = 127.0.0.1/8 ::1 192.168.1.0/24 172.16.0.0/12
 
-[n8n-auth-jail-medium]
-enabled = true
-port = 5678,22,80,443
-filter = n8n-alert-filter
-logpath = /var/log/security/fail2ban.log
-maxretry = 1
-bantime = 30
-action = %(action_)s
-         n8n-unban[name=medium]
 
-[n8n-auth-jail-high]
+[n8n-soar-jail]
 enabled = true
 port = 5678,22,80,443
-filter = n8n-high-filter
+filter = n8n-soar-filter
 logpath = /var/log/security/fail2ban.log
 maxretry = 1
+# LUEGO DE PRUEBAS CAMBIAR DE 60 A MAS ALTO
 bantime = 60
+# Reincidentes
+bantime.increment = true
+bantime.factor = 2     
+# LUEGO DE PRUEBAS CAMBIAR DE 120 A MAS ALTO
+bantime.maxtime = 120 
 action = %(action_)s
-         n8n-unban[name=high]
+         n8n-unban[name=soar]
 
-[n8n-auth-jail-critical]
-enabled = true
-port = 5678,22,80,443
-filter = n8n-critical-filter
-logpath = /var/log/security/fail2ban.log
-maxretry = 1
-bantime = 120
-action = %(action_)s
-         n8n-unban[name=critical]

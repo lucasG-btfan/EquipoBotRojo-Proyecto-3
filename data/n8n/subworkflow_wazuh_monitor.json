@@ -10,10 +10,10 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        0,
-        0
+        -112,
+        -16
       ],
-      "id": "912cdafb-388c-4398-aaf3-3ec925576c12",
+      "id": "4d550a87-49ee-4428-b60a-37788f4facba",
       "name": "Webhook - Recibir Alerta",
       "webhookId": "wazuh-monitor"
     },
@@ -24,10 +24,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        240,
-        0
+        128,
+        -16
       ],
-      "id": "d9395837-1209-477e-bea5-b8e96f5d7528",
+      "id": "a1fe93bb-1514-4225-b88a-2430f5c3b5d2",
       "name": "Preparar Payload Wazuh"
     },
     {
@@ -37,10 +37,10 @@
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        448,
-        0
+        336,
+        -16
       ],
-      "id": "e7b6a5d4-c3b2-4198-8765-4321fedcba09",
+      "id": "d5808732-3a3c-4fa8-8931-91cfd628bba6",
       "name": "Enviar Syslog UDP"
     },
     {
@@ -55,10 +55,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        656,
-        0
+        544,
+        -16
       ],
-      "id": "f2f28bf0-5589-4fff-a6e8-442a14e60be6",
+      "id": "71b23246-e8f2-49e7-8562-9007c7be5a46",
       "name": "Enviar a Logstash1"
     },
     {
@@ -68,10 +68,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        864,
-        0
+        752,
+        -16
       ],
-      "id": "306545f1-ce0e-4c67-b606-78a358d6100c",
+      "id": "2b19920b-8fa2-47a8-a746-51a567f7c38f",
       "name": "Log Éxito"
     }
   ],
@@ -126,7 +126,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "33647a2b-a8d2-463e-8cf2-3e453f79f637",
+  "versionId": "a18c0865-ada9-4af1-9c07-0b0320ccdb6e",
   "meta": {
     "instanceId": "7478c350e39689cddadf155b6c5aead67e0635cfe1aa4e6d60c18ecb354db193"
   },

@@ -223,7 +223,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const inputItems = $input.all();\nif (inputItems.length === 0) {\n  throw new Error(\"No se recibieron datos del ticket en este nodo.\");\n}\nconst ticket = inputItems[0].json;\n\nlet originalRuleName = \"Alerta Métrica Prometheus\";\ntry {\n  const primerNodo = $('Definir campo de origen').first().json;\n  if (primerNodo.datos_originales?.alerts && primerNodo.datos_originales.alerts.length > 0) {\n    const primeraAlerta = primerNodo.datos_originales.alerts[0];\n    originalRuleName = primeraAlerta.labels?.alertname || primerNodo.datos_originales.commonLabels?.alertname || \"Prometheus Alert\";\n  }\n} catch (e) {\n  // Si por alguna razón no puede leer el primer nodo, usamos el título del ticket como fallback\n  originalRuleName = ticket.title || \"Prometheus Alert\";\n}\n\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: 'http://logstash:8080',\n    body: {\n      ...ticket,\n      rule_name: originalRuleName, \n      type: 'ticket_created',\n      source: 'prometheus_alertmanager',\n      timestamp: new Date().toISOString()\n    },\n    json: true \n  });\n} catch (error) {\n  throw new Error('Error enviando ticket de Prometheus a Logstash: ' + error.message);\n}\n\n// 4. Respuesta de éxito\nconst response = {\n  success: true,\n  ticket_number: ticket.ticket_number,\n  message: `Ticket de métricas ${ticket.ticket_number} enviado a Logstash exitosamente`,\n  details: {\n    priority: ticket.priority,\n    category: ticket.category,\n    rule_name: originalRuleName,\n    assigned_to: ticket.assigned_to,\n    timestamp: new Date().toISOString()\n  }\n};\n\nreturn [{ json: response }];"
+        "jsCode": "const ticket = $('Construir mensaje Prometheus').first().json;\n\nif (ticket.category === 'IpBaneadaDetectada') {\n  return [{ \n    json: { \n      success: true, \n      message: \"Ticket omitido: IpBaneadaDetectada no se envía a Kibana para evitar ruido.\" \n    } \n  }];\n}\n\nlet originalRuleName = \"Alerta Métrica Prometheus\";\ntry {\n  const primerNodo = $('Definir campo de origen').first().json;\n  if (primerNodo.datos_originales?.alerts && primerNodo.datos_originales.alerts.length > 0) {\n    const primeraAlerta = primerNodo.datos_originales.alerts[0];\n    originalRuleName = primeraAlerta.labels?.alertname || primerNodo.datos_originales.commonLabels?.alertname || \"Prometheus Alert\";\n  }\n} catch (e) {\n  originalRuleName = ticket.title || \"Prometheus Alert\";\n}\n\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: 'http://logstash:8080',\n    body: {\n      ...ticket,\n      rule_name: originalRuleName, \n      type: 'ticket_created',\n      source: 'prometheus_alertmanager',\n      timestamp: new Date().toISOString()\n    },\n    json: true \n  });\n} catch (error) {\n  throw new Error('Error enviando ticket a Logstash: ' + error.message);\n}\n\n// 5. Respuesta de éxito con los datos reales\nreturn [{ \n  json: {\n    success: true,\n    ticket_number: ticket.ticket_number,\n    message: `Ticket de métricas ${ticket.ticket_number} enviado a Logstash exitosamente`,\n    details: {\n      priority: ticket.priority,\n      category: ticket.category,\n      rule_name: originalRuleName,\n      assigned_to: ticket.assigned_to,\n      timestamp: new Date().toISOString()\n    }\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -454,7 +454,7 @@
             "source_ip": "={{ $json.source_ip }}",
             "assigned_to": "={{ $json.assigned_to }}",
             "created_at": "={{ $json.created_at }}",
-            "alert_reference": "={{ $('Definir campo de origen').item.json.datos_originales }}"
+            "alert_reference": "={{ $json.alert_reference }}"
           },
           "matchingColumns": [
             "id"
@@ -750,7 +750,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "5f158691-2cf3-4c9c-aba8-4ee765c15d82",
+  "versionId": "c6aa6a07-8060-4504-a164-b7443bb53a9f",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "7478c350e39689cddadf155b6c5aead67e0635cfe1aa4e6d60c18ecb354db193"
