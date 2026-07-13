@@ -34,7 +34,9 @@ CREATE TABLE attack_patterns (
     first_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     occurrence_count INTEGER DEFAULT 1,
-    is_blocked BOOLEAN DEFAULT false
+    is_blocked BOOLEAN DEFAULT false,
+    recent_count INTEGER DEFAULT 1,
+    window_start TIMESTAMP DEFAULT CURRENT_TIMESTAMP    
 );
 
 -- Tabla de métricas de sistema
