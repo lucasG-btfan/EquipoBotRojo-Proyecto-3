@@ -1,0 +1,14 @@
+SSH (colocar unas 10 veces):
+docker exec wazuh-manager logger -n syslog-ng -P 514 -d -t sshd -p auth.warning --rfc3164 "Failed password for admin from 48.32.32.156 port 22 ssh2"
+Kernel Oops: 
+docker exec wazuh-manager logger -n syslog-ng -P 514 -d -t kernel -p kern.emerg --rfc3164 "Oops: BUG: unable to handle kernel NULL pointer dereference at 0000000000000000"
+Iptables: 
+docker exec wazuh-manager logger -n syslog-ng -P 514 -d -t kernel -p kern.warning --rfc3164 "iptables: DROP IN=eth0 OUT= SRC=194.165.16.99 DST=192.168.1.1 PROTO=TCP DPT=22"
+Sudo:
+docker exec wazuh-manager logger -n syslog-ng -P 514 -d -t sudo -p auth.notice --rfc3164 "db_admin : TTY=pts/0 ; PWD=/home/db_admin ; USER=root ; COMMAND=/bin/bash"
+Port Scan:
+docker exec wazuh-manager logger -n syslog-ng -P 514 -d -t kernel -p kern.warning --rfc3164 "SCAN detected SRC=91.108.4.100 DPT=22 DPT=80 DPT=443 DPT=3306 DPT=8080"
+Access denied:
+docker exec wazuh-manager logger -n syslog-ng -P 514 -d -t sshd -p auth.err --rfc3164 "Access denied to /var/www/html/.htpasswd from 185.220.101.9"
+
+Los comandos que se vayan a usar deben seguir esta estructura de los ejemplos con logger, ya que es lo mas realista para probar.
