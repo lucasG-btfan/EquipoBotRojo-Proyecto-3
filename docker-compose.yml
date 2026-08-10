@@ -3,7 +3,7 @@ version: '3.8'
 
 services:
   syslog-ng:
-    image: balabit/syslog-ng:latest
+    image: balabit/syslog-ng:latest #balabit/syslog-ng:4.10.2 
     container_name: syslog-ng
     ports:
       - "514:514/udp"
@@ -43,7 +43,7 @@ services:
 
 
   pgadmin:
-    image: dpage/pgadmin4
+    image: dpage/pgadmin4 #dpage/pgadmin4:9.11 
     container_name: security-pgadmin
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@example.com
@@ -76,7 +76,7 @@ services:
 
 
   fail2ban:
-    image: crazymax/fail2ban:latest
+    image: crazymax/fail2ban:latest #crazymax/fail2ban:1.1.0 
     container_name: fail2ban
     network_mode: "host"
     cap_add:
@@ -93,7 +93,7 @@ services:
 
 
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:latest # prom/prometheus:v3.9.1 
     container_name: prometheus
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
@@ -106,7 +106,7 @@ services:
 
 
   alertmanager:
-    image: prom/alertmanager:latest
+    image: prom/alertmanager:latest # prom/alertmanager:v0.31.1 
     container_name: alertmanager
     volumes:
       - ./prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
@@ -118,18 +118,19 @@ services:
 
 
   fail2ban-exporter:
-    build:
-      context: .
-      dockerfile: Dockerfile.exporter
-    container_name: fail2ban-exporter
-    user: root
-    ports:
-      - "9121:9121"
-    volumes:
-      - fail2ban_db:/data:ro
-    restart: unless-stopped
-    networks:
-      - security-network
+   build:
+     context: .
+     dockerfile: Dockerfile.exporter
+   container_name: fail2ban-exporter
+   user: root
+   ports:
+     - "9121:9121"
+   volumes:
+     - fail2ban_db:/data:ro
+     - fail2ban_data:/var/run/fail2ban:ro
+   restart: unless-stopped
+   networks:
+     - security-network
 
 
   kibana:
@@ -175,7 +176,7 @@ services:
 
 
   n8n:
-    image: n8nio/n8n:latest
+    image: n8nio/n8n:latest # n8nio/n8n:1.118.2 
     container_name: n8n
     user: root
     ports:
