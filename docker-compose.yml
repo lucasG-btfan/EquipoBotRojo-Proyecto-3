@@ -3,7 +3,7 @@ version: '3.8'
 
 services:
   syslog-ng:
-    image: balabit/syslog-ng:latest #balabit/syslog-ng:4.10.2 
+    image: balabit/syslog-ng:4.10.2 # balabit/syslog-ng:latest 
     container_name: syslog-ng
     ports:
       - "514:514/udp"
@@ -43,7 +43,7 @@ services:
 
 
   pgadmin:
-    image: dpage/pgadmin4 #dpage/pgadmin4:9.11 
+    image: dpage/pgadmin4:9.11 # dpage/pgadmin4 
     container_name: security-pgadmin
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@example.com
@@ -76,7 +76,7 @@ services:
 
 
   fail2ban:
-    image: crazymax/fail2ban:latest #crazymax/fail2ban:1.1.0 
+    image: crazymax/fail2ban@sha256:59886cae34d2e14f738c999e17778fb3b9878697f970e559490905231148cab5  # crazymax/fail2ban:latest  # crazymax/fail2ban:1.1.0  
     container_name: fail2ban
     network_mode: "host"
     cap_add:
@@ -93,7 +93,7 @@ services:
 
 
   prometheus:
-    image: prom/prometheus:latest # prom/prometheus:v3.9.1 
+    image: prom/prometheus:v3.9.1 # prom/prometheus:latest 
     container_name: prometheus
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
@@ -106,7 +106,7 @@ services:
 
 
   alertmanager:
-    image: prom/alertmanager:latest # prom/alertmanager:v0.31.1 
+    image: prom/alertmanager:v0.31.1  # prom/alertmanager:latest  
     container_name: alertmanager
     volumes:
       - ./prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
@@ -176,7 +176,7 @@ services:
 
 
   n8n:
-    image: n8nio/n8n:latest # n8nio/n8n:1.118.2 
+    image: n8nio/n8n:1.118.2 # n8nio/n8n:latest 
     container_name: n8n
     user: root
     ports:
