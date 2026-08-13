@@ -7,8 +7,8 @@ groups:
         labels:
           severity: critical
         annotations:
-          summary: "IP Bloqueada por Fail2ban"
-          description: "Se ha detectado una o más IP/s baneadas en el sistema de seguridad."
+          summary: "IP Bloqueada en {{ $labels.jail }}"
+          description: "Se ha detectado una IP baneada en la jail: {{ $labels.jail }}."
 
       - alert: Fail2banCaido
         expr: fail2ban_up == 0

@@ -3,7 +3,7 @@ version: '3.8'
 
 services:
   syslog-ng:
-    image: balabit/syslog-ng:latest
+    image: balabit/syslog-ng:4.10.2 # balabit/syslog-ng:latest 
     container_name: syslog-ng
     ports:
       - "514:514/udp"
@@ -43,7 +43,7 @@ services:
 
 
   pgadmin:
-    image: dpage/pgadmin4
+    image: dpage/pgadmin4:9.11 # dpage/pgadmin4 
     container_name: security-pgadmin
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@example.com
@@ -76,7 +76,7 @@ services:
 
 
   fail2ban:
-    image: crazymax/fail2ban:latest
+    image: crazymax/fail2ban@sha256:59886cae34d2e14f738c999e17778fb3b9878697f970e559490905231148cab5  # crazymax/fail2ban:latest  # crazymax/fail2ban:1.1.0  
     container_name: fail2ban
     network_mode: "host"
     cap_add:
@@ -84,7 +84,8 @@ services:
       - NET_RAW
     volumes:
       - ./fail2ban_config/jail.local:/etc/fail2ban/jail.local:ro
-      - ./fail2ban_config/filter.d:/etc/fail2ban/filter.d:ro
+      - ./fail2ban_config/filter.d:/data/filter.d:ro
+      - ./fail2ban_config/action.d:/data/action.d:ro
       - ./logs:/var/log:ro
       - fail2ban_data:/var/run/fail2ban
       - fail2ban_db:/data
@@ -92,7 +93,7 @@ services:
 
 
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v3.9.1 # prom/prometheus:latest 
     container_name: prometheus
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
@@ -105,7 +106,7 @@ services:
 
 
   alertmanager:
-    image: prom/alertmanager:latest
+    image: prom/alertmanager:v0.31.1  # prom/alertmanager:latest  
     container_name: alertmanager
     volumes:
       - ./prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
@@ -117,18 +118,19 @@ services:
 
 
   fail2ban-exporter:
-    build:
-      context: .
-      dockerfile: Dockerfile.exporter
-    container_name: fail2ban-exporter
-    user: root
-    ports:
-      - "9121:9121"
-    volumes:
-      - fail2ban_db:/data:ro
-    restart: unless-stopped
-    networks:
-      - security-network
+   build:
+     context: .
+     dockerfile: Dockerfile.exporter
+   container_name: fail2ban-exporter
+   user: root
+   ports:
+     - "9121:9121"
+   volumes:
+     - fail2ban_db:/data:ro
+     - fail2ban_data:/var/run/fail2ban:ro
+   restart: unless-stopped
+   networks:
+     - security-network
 
 
   kibana:
@@ -174,7 +176,7 @@ services:
 
 
   n8n:
-    image: n8nio/n8n:latest
+    image: n8nio/n8n:1.118.2 # n8nio/n8n:latest 
     container_name: n8n
     user: root
     ports:

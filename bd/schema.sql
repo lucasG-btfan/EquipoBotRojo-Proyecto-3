@@ -21,7 +21,8 @@ CREATE TABLE alerts (
     resolved_at TIMESTAMP,
     risk_score INTEGER,
     risk_level VARCHAR(20),
-    threat_reputation VARCHAR(50)
+    threat_reputation VARCHAR(50),
+    threat_intel JSONB                -- Contexto enriquecido de Threat Intel y GeoIP (is_private_ip, geo_info, confidence, tags)
 );
 
 -- Tabla de patrones de ataque detectados
@@ -33,7 +34,9 @@ CREATE TABLE attack_patterns (
     first_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     occurrence_count INTEGER DEFAULT 1,
-    is_blocked BOOLEAN DEFAULT false
+    is_blocked BOOLEAN DEFAULT false,
+    recent_count INTEGER DEFAULT 1,
+    window_start TIMESTAMP DEFAULT CURRENT_TIMESTAMP    
 );
 
 -- Tabla de métricas de sistema
