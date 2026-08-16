@@ -64,6 +64,7 @@ EquipoBotRojo-Proyecto-3/
 - Usar `axios` para llamadas HTTP en el frontend.
 - Usar `httpx` para llamadas HTTP en el backend.
 - Antes de instalar cualquier dependencia no listada en este documento, preguntar primero.
+- Usar el archivo ./bd/schema.sql (o schema-extended...) como referencia obligatoria de la estructura de tablas y tipos de datos para crear los modelos en FastAPI.
 
 ## Autenticación
 
@@ -90,7 +91,7 @@ Estos intervalos deben ser configurables en el frontend vía constantes, no hard
 ```
 DATABASE_URL=postgresql://db_user:db_pass@192.168.100.160:5432/security_monitoring
 N8N_URL=http://192.168.100.160:5678
-N8N_API_KEY=<completar antes de empezar — ver nota abajo>
+N8N_API_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyNDcwNGYxYy1hYzU4LTRlNDctYjg3Ni03NGYzOTI1NDA1M2QiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzg2OTEzMDM5fQ.oz1Fr7ey6eiDEzaRuksrKDbxoNSAR6RbrJRFYzPLHI0
 PROMETHEUS_URL=http://192.168.100.160:9090
 DOCKER_HOST=unix:///var/run/docker.sock
 DASHBOARD_USER=admin
@@ -99,7 +100,6 @@ JWT_SECRET=<completar>
 FRONTEND_ORIGIN=http://localhost:5173
 ```
 
-> **Nota sobre `N8N_API_KEY`:** si la instancia de n8n tiene autenticación habilitada (recomendado, ya que un endpoint del dashboard puede disparar workflows), esta clave es obligatoria y debe completarse antes de que el agente empiece a integrar el disparo de workflows. Si n8n corre sin auth en este entorno, dejar la variable vacía pero documentarlo explícitamente en `docs/`.
 
 > `fail2ban-exporter` no se consume directamente: expone métricas en formato texto plano de Prometheus, no JSON. Todas las métricas relacionadas con Fail2ban (`fail2ban_banned_ips`, `fail2ban_up`, etc.) se obtienen consultando la API de Prometheus (`PROMETHEUS_URL/api/v1/query`), que ya las tiene scrapeadas.
 

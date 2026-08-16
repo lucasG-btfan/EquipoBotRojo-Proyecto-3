@@ -39,7 +39,7 @@ Contenido:
 Vista principal con métricas en tiempo real. Se actualiza automáticamente cada 30 segundos.
 
 Contenido:
-- **Tarjetas de estado de contenedores:** un card por cada contenedor relevante mostrando nombre y estado (running/stopped). Contenedores: `n8n`, `fail2ban`, `prometheus`, `alertmanager`, `syslog-ng`, `wazuh-manager`, `elasticsearch`, `logstash`, `kibana`, `security-postgres`, `fail2ban-exporter`
+- **Tarjetas de estado de contenedores:** un card por cada contenedor relevante mostrando nombre y estado (running/stopped). Contenedores: `n8n`, `fail2ban`, `prometheus`, `alertmanager`, `syslog-ng`, `wazuh-manager`, `wazuh-indexer`, `wazuh-dashboard`, `elasticsearch`, `logstash`, `kibana`, `security-postgres`, `fail2ban-exporter`, `security-pgadmin`
 - **Métricas de Prometheus:** IPs baneadas actualmente (`fail2ban_banned_ips`) y estado de fail2ban (`fail2ban_up`)
 - **Últimas 5 alertas de PostgreSQL** (tabla `alerts`): timestamp, severidad, categoría, IP origen, risk level
 
@@ -53,17 +53,16 @@ Contenido:
   - "Ejecutar métricas Prometheus" — dispara el workflow de métricas
   - Cada botón muestra un spinner mientras espera respuesta y un mensaje de éxito/error
 - **Inyector de logs de prueba:** selector desplegable con categorías predefinidas y botón "Inyectar". Categorías disponibles:
-  - Root Login Attempt (185.220.101.9)
-  - SSH Failed Password x12 (45.33.32.156)
-  - Access Denied x7 (54.210.15.20)
-  - Port Scan (194.165.16.99)
-  - Iptables DROP x6 (45.142.212.100)
-  - Sudo Usage (db_admin)
-  - Kernel Oops
-  - Service Restart
-  - Paquete completo (todos los anteriores)
-  - Log legítimo (sin amenaza)
-
+  - Root Login Attempt — `Failed password for root from 185.220.101.9 port 22 ssh2` (2 logs, desde web-server)
+  - SSH Failed Password x12 — `Failed password for admin from 45.33.32.156 port 22 ssh2` (12 logs, desde web-server)
+  - Access Denied x7 — `Access denied to /var/www/html/.htpasswd from 54.210.15.20` (7 logs, desde web-server)
+  - Port Scan — `SCAN detected SRC=194.165.16.99 DPT=22 DPT=80 DPT=443 DPT=3306 DPT=8080` (2 logs, desde firewall)
+  - Iptables DROP x6 — `iptables: DROP IN=eth0 OUT= SRC=45.142.212.100 DST=192.168.1.1 PROTO=TCP DPT=22` (6 logs, desde firewall)
+  - Sudo Usage — `db_admin : TTY=pts/0 ; PWD=/home/db_admin ; USER=root ; COMMAND=/bin/bash` (2 logs, desde db-server)
+  - Kernel Oops — `Oops: BUG: unable to handle kernel NULL pointer dereference at 0000000000000000` (1 log, desde db-server)
+  - Service Restart — `Started MySQL Community Server.` (2 logs, desde db-server)
+  - Paquete completo — todos los anteriores combinados
+  - Log legítimo — `Accepted password for rafael from 192.168.1.10 port 22 ssh2` (1 log, desde web-server)
 ### 3.4 Gestión de IPs
 Tablas de datos con paginación y lazy loading.
 
@@ -143,12 +142,20 @@ Devuelve las últimas 50 líneas del archivo `/home/node/logs/security/alerts`.
 ### 4.5 Workflows n8n
 
 POST /api/workflows/analisis
-
-Ejecuta el workflow principal de n8n via API REST.
+Ejecuta el workflow principal de análisis de logs a través de la API REST de n8n.
+- **Workflow Target:** `Workflow_fase _3-final`
+- **ID:** `IlZkF2tpQcwn5ibI`
+- **Request a n8n:** `POST http://N8N_URL/api/v1/workflows/IlZkF2tpQcwn5ibI/run`
+- **Header:** `X-N8N-API-KEY: {N8N_API_KEY}`
 
 POST /api/workflows/metricas
+Ejecuta el workflow de recolección de métricas de Prometheus.
+- **Workflow Target:** `Metricas Prometheus`
+- **ID:** `S8KYnwHGovQ9pc7G`
+- **Request a n8n:** `POST http://N8N_URL/api/v1/workflows/S8KYnwHGovQ9pc7G/run`
+- **Header:** `X-N8N-API-KEY: {N8N_API_KEY}`
 
-Ejecuta el workflow de métricas de Prometheus via API REST.
+*(Nota: Otros workflows activos del stack para posibles integraciones: Auto-bloqueo [`mk0m9Wef9tFWpqL4`], Monitor Wazuh [`2FjuAyoNnVKfExpe`], Desbaneo BD [`BOKa87UsdZCW0BOC`], Tickets Automáticos [`B0ZXhvCLkdwUOVKj`]).*
 
 ### 4.6 Inyector de logs
 
@@ -161,15 +168,19 @@ Categorías válidas: `root_login`, `ssh_failed`, `access_denied`, `port_scan`, 
 ### 4.7 Gestión de IPs
 
 GET /api/ips/bloqueadas?pagina=1&limite=20
+Devuelve: id, ip_address, threat_score, reason, blocked_at, blocked_until, is_active
+
 GET /api/ips/patrones?pagina=1&limite=20
+Devuelve: id, pattern_type, source_ip, target_host, first_seen, last_seen, occurrence_count, recent_count, is_blocked
+
 GET /api/ips/metricas?pagina=1&limite=20
+Devuelve: id, timestamp, hostname, metric_name, metric_value, unit
 
 
 ### 4.8 Tickets
 
 GET /api/tickets?pagina=1&limite=15
-
-Devuelve tickets de la tabla `security_tickets` ordenados por `created_at` descendente.
+Devuelve: id, ticket_number, title, description, status, priority, category, source_ip, threat_score, assigned_to, created_at, updated_at, alert_reference
 
 ### 4.9 Fail2ban
 
@@ -182,20 +193,20 @@ Ejecuta `docker exec fail2ban fail2ban-client status n8n-soar-jail` y parsea el 
 ## 5. Modelos de datos relevantes (PostgreSQL)
 
 ```sql
--- Tabla principal de alertas
-alerts (id, timestamp, severity, category, source_ip, risk_score, risk_level, threat_reputation, description, raw_log, status)
+-- Alertas
+alerts (id, timestamp, severity, category, source_host, source_ip, target_host, event_count, description, raw_log, status, assigned_to, notes, resolved_at, risk_score, risk_level, threat_reputation, threat_intel)
 
--- Patrones de ataque acumulados
-attack_patterns (id, pattern_type, source_ip, first_seen, last_seen, occurrence_count, recent_count, is_blocked)
+-- Patrones de ataque
+attack_patterns (id, pattern_type, source_ip, target_host, first_seen, last_seen, occurrence_count, is_blocked, recent_count, window_start)
 
 -- Métricas del sistema
 system_metrics (id, timestamp, hostname, metric_name, metric_value, unit)
 
--- Tickets generados
-security_tickets (id, ticket_number, title, category, priority, status, source_ip, threat_score, assigned_to, created_at)
-
 -- IPs bloqueadas
-blocked_ips (id, ip_address, blocked_at, blocked_until, is_active, jail_type)
+blocked_ips (id, ip_address, threat_score, reason, blocked_at, blocked_until, is_active)
+
+-- Tickets
+security_tickets (id, ticket_number, title, description, status, priority, category, source_ip, threat_score, assigned_to, created_at, updated_at, alert_reference → alerts.id)
 ```
 
 ---
@@ -213,7 +224,6 @@ blocked_ips (id, ip_address, blocked_at, blocked_until, is_active, jail_type)
 ## 7. Decisiones pendientes
 
 - [ ] Confirmar si el frontend y backend van en el mismo repositorio o separados (pendiente reunión con el profesor)
-- [ ] Confirmar IDs exactos de los workflows de n8n para los endpoints de ejecución
 - [ ] Confirmar schema exacto de la tabla `blocked_ips` y `security_tickets`
 - [ ] Confirmar si se necesita autenticación en el panel
 
