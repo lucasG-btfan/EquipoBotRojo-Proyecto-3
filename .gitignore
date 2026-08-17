@@ -20,3 +20,7 @@ n8n_config/
 # Python
 __pycache__/
 *.pyc
+
+.env
+*.env
+**/.env

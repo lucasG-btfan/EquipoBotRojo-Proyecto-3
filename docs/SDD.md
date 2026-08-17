@@ -26,6 +26,9 @@ El frontend **nunca** llama directamente a las APIs del stack — todo pasa por 
 
 ## 3. Secciones del frontend
 
+### 3.0 Autenticación
+Pantalla de login que aparece antes de cualquier sección del dashboard. Muestra un formulario con usuario y contraseña. Al autenticarse correctamente, el backend emite un JWT que el frontend almacena y envía en cada request subsiguiente como header `Authorization: Bearer {token}`. Si el token expira o es inválido, redirige automáticamente al login.
+
 ### 3.1 Inicio
 Página de bienvenida con presentación del sistema. Debe transmitir profesionalismo y claridad.
 
@@ -42,6 +45,7 @@ Contenido:
 - **Tarjetas de estado de contenedores:** un card por cada contenedor relevante mostrando nombre y estado (running/stopped). Contenedores: `n8n`, `fail2ban`, `prometheus`, `alertmanager`, `syslog-ng`, `wazuh-manager`, `wazuh-indexer`, `wazuh-dashboard`, `elasticsearch`, `logstash`, `kibana`, `security-postgres`, `fail2ban-exporter`, `security-pgadmin`
 - **Métricas de Prometheus:** IPs baneadas actualmente (`fail2ban_banned_ips`) y estado de fail2ban (`fail2ban_up`)
 - **Últimas 5 alertas de PostgreSQL** (tabla `alerts`): timestamp, severidad, categoría, IP origen, risk level
+- **Métricas de desempeño (TPW):** último tiempo de procesamiento del workflow principal, promedio de las últimas N ejecuciones, lista de las últimas ejecuciones con duración y estado (éxito/error)
 
 ### 3.3 Logs y detección
 Herramientas operativas del sistema.
@@ -63,11 +67,14 @@ Contenido:
   - Service Restart — `Started MySQL Community Server.` (2 logs, desde db-server)
   - Paquete completo — todos los anteriores combinados
   - Log legítimo — `Accepted password for rafael from 192.168.1.10 port 22 ssh2` (1 log, desde web-server)
+  - **Historial de ejecuciones de n8n:** tabla con las últimas 10 ejecuciones del workflow principal mostrando fecha, duración en segundos y estado (éxito/error con badge de color)
+
 ### 3.4 Gestión de IPs
 Tablas de datos con paginación y lazy loading.
 
 Contenido:
 - **Tabla blocked_ips:** columnas: IP, fecha de bloqueo, fecha estimada de desbloqueo, estado (activo/inactivo con badge de color). Paginación de 20 registros por página
+   - Cada fila de `blocked_ips` tiene un botón "Desbloquear" que llama a `POST /api/ips/{ip}/unblock` y actualiza `is_active = false` en la BD
 - **Tabla attack_patterns:** columnas: IP, tipo de patrón, primera vez visto, última vez visto, cantidad de ocurrencias recientes, bloqueada (sí/no). Paginación de 20 registros por página, ordenada por `last_seen` descendente
 - **Tabla system_metrics:** columnas: timestamp, hostname, métrica, valor, unidad. Paginación de 20 registros por página, ordenada por `timestamp` descendente
 
@@ -100,9 +107,26 @@ Contenido:
 - Cada card muestra: nombre, estado (FIRING/PENDING/INACTIVE con color rojo/amarillo/verde), valor actual de la métrica, tiempo activo si está en FIRING
 - Se actualiza cada 30 segundos
 
+### 3.8 Wazuh
+Estado y alertas del agente Wazuh.
+
+Contenido:
+- Contador de alertas nativas de Wazuh (FIM, integridad de archivos, etc.) diferenciadas de las alertas que llegan vía n8n
+- Nota aclaratoria de que las alertas de seguridad procesadas por n8n se visualizan en la sección Dashboard y Tickets
+
 ---
 
 ## 4. Backend — Endpoints
+
+### 4.0 Autenticación
+```
+POST /api/auth/login
+Body: { "usuario": "admin", "contraseña": "..." }
+Devuelve: { "access_token": "...", "token_type": "bearer" }
+
+Todas las demás rutas requieren header: Authorization: Bearer {token}
+Las credenciales se validan contra las variables de entorno DASHBOARD_USER y DASHBOARD_PASSWORD.
+```
 
 ### 4.1 Contenedores
 
@@ -148,6 +172,17 @@ Ejecuta el workflow principal de análisis de logs a través de la API REST de n
 - **Request a n8n:** `POST http://N8N_URL/api/v1/workflows/IlZkF2tpQcwn5ibI/run`
 - **Header:** `X-N8N-API-KEY: {N8N_API_KEY}`
 
+GET /api/workflows/runs
+Devuelve las últimas 10 ejecuciones del workflow principal desde la API de n8n.
+- Request a n8n: GET http://N8N_URL/api/v1/executions?workflowId=IlZkF2tpQcwn5ibI&limit=10
+- Header: X-N8N-API-KEY: {N8N_API_KEY}
+- Respuesta incluye: id, startedAt, stoppedAt, status, duracion_segundos (calculada)
+
+GET /api/metrics/tpw
+Obtiene las últimas 10 ejecuciones del workflow principal y calcula el promedio de duración.
+- Usa los mismos datos que /api/workflows/runs
+- Respuesta: { "promedio_segundos": 1.081, "ultima_ejecucion_segundos": 0.994, "ejecuciones": [...] }
+
 POST /api/workflows/metricas
 Ejecuta el workflow de recolección de métricas de Prometheus.
 - **Workflow Target:** `Metricas Prometheus`
@@ -176,6 +211,12 @@ Devuelve: id, pattern_type, source_ip, target_host, first_seen, last_seen, occur
 GET /api/ips/metricas?pagina=1&limite=20
 Devuelve: id, timestamp, hostname, metric_name, metric_value, unit
 
+POST /api/ips/{ip}/unban
+Desbanea una IP ejecutando el comando de fail2ban. El resto del flujo (actualización de BD) lo maneja automáticamente fail2ban a través del webhook de desbaneo configurado en actionunban.
+- Ejecuta: `docker exec fail2ban fail2ban-client set n8n-soar-jail unbanip {ip}`
+- No modifica PostgreSQL directamente — eso lo hace el workflow "Anotar desbaneo en BD" (ID: BOKa87UsdZCW0BOC) que fail2ban dispara automáticamente
+- Respuesta: { "mensaje": "IP {ip} desbaneada correctamente" }
+- Error si la IP no está baneada: 404
 
 ### 4.8 Tickets
 
@@ -188,6 +229,13 @@ GET /api/fail2ban/estado
 
 Ejecuta `docker exec fail2ban fail2ban-client status n8n-soar-jail` y parsea el resultado.
 
+### 4.10 Wazuh
+```
+GET /api/wazuh/alerts/count
+Consulta la API de Wazuh para obtener el conteo de alertas nativas (FIM, integridad, etc.).
+- Requiere credenciales de Wazuh definidas en variables de entorno: WAZUH_URL, WAZUH_USER, WAZUH_PASSWORD
+- Endpoint Wazuh: GET https://WAZUH_URL:55000/alerts?limit=1 (para obtener el total)
+```
 ---
 
 ## 5. Modelos de datos relevantes (PostgreSQL)
@@ -219,6 +267,16 @@ security_tickets (id, ticket_number, title, description, status, priority, categ
 - **Sidebar:** navegación lateral fija con íconos y labels para cada sección
 - **Responsive:** mínimo funcional en 1280px de ancho
 
+### Variables de entorno adicionales — Backend
+```
+DASHBOARD_USER=admin
+DASHBOARD_PASSWORD=<completar>
+JWT_SECRET=<completar>
+FRONTEND_ORIGIN=http://localhost:5173
+WAZUH_URL=https://192.168.100.160
+WAZUH_USER=admin
+WAZUH_PASSWORD=Admin1234!
+```
 ---
 
 ## 7. Decisiones pendientes
@@ -226,6 +284,8 @@ security_tickets (id, ticket_number, title, description, status, priority, categ
 - [ ] Confirmar si el frontend y backend van en el mismo repositorio o separados (pendiente reunión con el profesor)
 - [ ] Confirmar schema exacto de la tabla `blocked_ips` y `security_tickets`
 - [ ] Confirmar si se necesita autenticación en el panel
+- [ ] Confirmar tiempo de expiración del JWT (sugerido: 8 horas)
+- [ ] Confirmar si el endpoint de Wazuh es accesible desde el backend sin certificado válido (probable que requiera verify=False en httpx)
 
 ---
 
