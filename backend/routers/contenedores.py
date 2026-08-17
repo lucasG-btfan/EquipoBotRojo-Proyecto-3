@@ -1,12 +1,14 @@
 """Router de contenedores Docker — estado y métricas de recursos."""
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+
+from backend.dependencies import usuario_actual
 
 router = APIRouter(prefix="/api/status", tags=["Contenedores"])
 
 
 @router.get("/containers")
-async def obtener_contenedores():
+async def obtener_contenedores(usuario: dict = Depends(usuario_actual)):
     """Retorna el estado up/down de cada contenedor Docker."""
     try:
         return {"mensaje": "Endpoint no implementado"}
@@ -15,7 +17,7 @@ async def obtener_contenedores():
 
 
 @router.get("/resources")
-async def obtener_recursos():
+async def obtener_recursos(usuario: dict = Depends(usuario_actual)):
     """Retorna consumo de CPU/RAM por contenedor."""
     try:
         return {"mensaje": "Endpoint no implementado"}
