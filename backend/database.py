@@ -1,12 +1,19 @@
 """Conexión async a PostgreSQL con SQLAlchemy."""
 
+from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
 from backend.config import settings
 
+# AGENTS.md documenta DATABASE_URL sin driver explícito (postgresql://...);
+# el motor async requiere el driver asyncpg en la URL.
+_database_url = make_url(settings.DATABASE_URL)
+if _database_url.drivername == "postgresql":
+    _database_url = _database_url.set(drivername="postgresql+asyncpg")
+
 engine = create_async_engine(
-    settings.DATABASE_URL,
+    _database_url,
     pool_timeout=3,
     connect_args={"timeout": 5},
 )
