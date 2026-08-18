@@ -11,7 +11,11 @@ class Settings(BaseSettings):
     N8N_URL: str = "http://localhost:5678"
     N8N_API_KEY: str = ""
     PROMETHEUS_URL: str = "http://localhost:9090"
-    DOCKER_HOST: str = "unix:///var/run/docker.sock"
+    # Endpoint del demonio Docker. Esquemas admitidos por el SDK `docker`:
+    #   npipe://...        -> Docker Desktop en Windows (named pipe, no expone socket Unix)
+    #   unix:///ruta.sock  -> Linux (socket Unix)
+    #   tcp://host:puerto  -> demonio remoto (solo si está expuesto de forma segura)
+    DOCKER_HOST: str = "npipe:////./pipe/dockerDesktopLinuxEngine"
     DASHBOARD_USER: str = "admin"
     DASHBOARD_PASSWORD: str = "admin"
     JWT_SECRET: str = "cambia-este-secreto"

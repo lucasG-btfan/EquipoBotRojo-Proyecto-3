@@ -14,5 +14,5 @@ class RecursoSchema(BaseModel):
     """Schema de respuesta para recursos de un contenedor."""
     nombre: str
     cpu_porcentaje: float | None = None
+    ram_mb: float | None = None
     ram_porcentaje: float | None = None
-    ram_uso: str | None = None
