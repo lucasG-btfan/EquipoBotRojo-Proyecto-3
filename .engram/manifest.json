@@ -48,6 +48,14 @@
       "sessions": 0,
       "memories": 5,
       "prompts": 0
+    },
+    {
+      "id": "fcf33e80",
+      "created_by": "lucas",
+      "created_at": "2026-08-18T03:19:59Z",
+      "sessions": 1,
+      "memories": 3,
+      "prompts": 6
     }
   ]
 }
