@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     WAZUH_PASSWORD: str = ""
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_HOURS: int = 8
+    ALERTS_LOG_PATH: str = "logs/alerts.log"
 
     model_config = {
         "env_file": str(Path(__file__).resolve().parent / ".env"),
