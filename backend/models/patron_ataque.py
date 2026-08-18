@@ -18,5 +18,3 @@ class PatronAtaque(Base):
     last_seen = Column(DateTime, server_default=func.current_timestamp())
     occurrence_count = Column(Integer, default=1)
     is_blocked = Column(Boolean, default=False)
-    recent_count = Column(Integer, default=1)
-    window_start = Column(DateTime, server_default=func.current_timestamp())
