@@ -32,6 +32,14 @@
       "sessions": 1,
       "memories": 2,
       "prompts": 8
+    },
+    {
+      "id": "b67ce607",
+      "created_by": "rafan",
+      "created_at": "2026-08-18T01:18:09Z",
+      "sessions": 1,
+      "memories": 4,
+      "prompts": 0
     }
   ]
 }

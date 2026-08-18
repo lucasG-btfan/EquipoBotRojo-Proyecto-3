@@ -1,10 +1,12 @@
 import { createContext, useContext, useState, type ReactNode } from 'react'
 import { CLAVE_TOKEN } from '../services/apiClient'
+import { iniciarSesion as iniciarSesionServicio } from '../services/authService'
 
 interface ContextoAuth {
   token: string | null
   estaAutenticado: boolean
-  iniciarSesion: (token: string) => void
+  cargando: boolean
+  iniciarSesion: (usuario: string, contraseña: string) => Promise<void>
   cerrarSesion: () => void
 }
 
@@ -17,13 +19,19 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   // Se hidrata desde localStorage en el inicializador de useState (no en un
   // useEffect) para que el primer render ya conozca la sesión existente y
-  // ProtectedRoute no redirija de forma espuria a /login (ver design.md D4).
+  // ProtectedRoute no redirija de forma espuria a /login (ver design.md D5).
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(CLAVE_TOKEN))
+  const [cargando, setCargando] = useState(false)
 
-  function iniciarSesion(nuevoToken: string) {
-    // Sin llamada a la API: la autenticación real se implementa en CH03.
-    localStorage.setItem(CLAVE_TOKEN, nuevoToken)
-    setToken(nuevoToken)
+  async function iniciarSesion(usuario: string, contraseña: string): Promise<void> {
+    setCargando(true)
+    try {
+      const { access_token } = await iniciarSesionServicio({ usuario, contraseña })
+      localStorage.setItem(CLAVE_TOKEN, access_token)
+      setToken(access_token)
+    } finally {
+      setCargando(false)
+    }
   }
 
   function cerrarSesion() {
@@ -34,6 +42,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const valor: ContextoAuth = {
     token,
     estaAutenticado: token !== null,
+    cargando,
     iniciarSesion,
     cerrarSesion,
   }

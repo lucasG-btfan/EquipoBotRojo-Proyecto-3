@@ -8,6 +8,14 @@ import axios, { AxiosError } from 'axios'
  */
 export const CLAVE_TOKEN = 'siem_token'
 
+/**
+ * Ruta del endpoint de login. Se exporta como constante compartida (en vez
+ * de repetir el literal en `authService`) para que el interceptor de
+ * response pueda reconocer sus propios 401 sin duplicar la ruta en dos
+ * archivos que podrían divergir (ver design.md D3).
+ */
+export const RUTA_LOGIN = '/api/auth/login'
+
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
   timeout: 15000,
@@ -28,7 +36,13 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (respuesta) => respuesta,
   (error: AxiosError<{ detail?: string }>) => {
-    if (error.response?.status === 401) {
+    const esLogin = error.config?.url === RUTA_LOGIN
+
+    // El 401 del propio login (contraseña incorrecta) NO dispara esta
+    // limpieza: si lo hiciera, la redirección dura recargaría la página
+    // antes de que LoginPage pueda mostrar el mensaje de error (ver
+    // design.md D3).
+    if (error.response?.status === 401 && !esLogin) {
       localStorage.removeItem(CLAVE_TOKEN)
       // Fuera del árbol de React: no hay acceso a `navigate()`, por eso
       // se usa una redirección dura (ver design.md D2).
