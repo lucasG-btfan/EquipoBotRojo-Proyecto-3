@@ -356,3 +356,64 @@ Hubo problemas con kibana y wazuh:
  -no puedo ver los datos en wazuh
  -arregle kibana, tengo mi tabla y el indice n8n-alerts* y exporte el ndjson
 Creo que esta todo listo, solo falta arreglar wazuh y asegurarse que tanto eso como kibana funcionen.
+
+# Inyector de logs de prueba (CH07) — preparación de los emisores
+
+El backend expone `POST /api/logs/inject` y `GET /api/logs/inject/categorias` para generar logs
+sintéticos que atraviesan la cadena real de detección (syslog-ng → Wazuh → n8n → PostgreSQL →
+Fail2ban → Prometheus). Estos endpoints **no crean contenedores**: los tres emisores
+(`web-server`, `firewall`, `db-server`) son una precondición que el operador prepara a mano, en
+cada sesión de pruebas, siguiendo el mismo procedimiento documentado en la tesis del proyecto.
+
+## Por qué es manual
+
+Los emisores no están declarados en `docker-compose.yml` (el stack declarado sigue siendo de 14
+contenedores). Son efímeros y se recrean para cada demostración; el backend solo los verifica
+(existencia, estado `running`, red compartida con `syslog-ng`, presencia de `logger`) y nunca los
+crea, arranca ni modifica. Si falta alguno, el endpoint responde `503` con el comando exacto para
+resolverlo.
+
+## Paso 0 — averiguar el nombre real de la red
+
+`docker-compose.yml` declara `security-network`, pero Compose la materializa como
+`<nombre-del-proyecto>_security-network`. Antes de crear los emisores, confirmá el nombre real:
+
+```bash
+docker network ls | grep security-network
+```
+
+## Paso 1 — crear los tres emisores
+
+Reemplazá `<red>` por el nombre obtenido en el paso 0. Cada emisor se crea con `--hostname` igual
+a su nombre (es lo que queda como `source_host` en la alerta) y en la red del stack:
+
+```bash
+docker run -d --name web-server --hostname web-server --network <red> alpine sleep infinity
+docker run -d --name firewall   --hostname firewall   --network <red> alpine sleep infinity
+docker run -d --name db-server  --hostname db-server   --network <red> alpine sleep infinity
+```
+
+## Paso 2 — instalar `logger` (util-linux) en cada uno
+
+La imagen `alpine` no trae `logger` de `util-linux` (el `logger` de BusyBox no soporta
+`--rfc3164`). Requiere salida a internet en el momento de instalarlo:
+
+```bash
+docker exec web-server apk add --no-cache util-linux
+docker exec firewall   apk add --no-cache util-linux
+docker exec db-server  apk add --no-cache util-linux
+```
+
+## Verificación rápida
+
+`command -v logger` no alcanza: la imagen `alpine` trae el applet `logger` de BusyBox
+preinstalado, que no soporta `--rfc3164` (falla silenciosamente en vez de emitir el log). Verificá
+soporte real de `--rfc3164`:
+
+```bash
+docker exec web-server sh -c "logger --help 2>&1 | grep -q -- --rfc3164 && echo OK || echo FALTA util-linux"
+```
+
+Con los tres emisores creados y con `logger` instalado, `POST /api/logs/inject` funciona para
+cualquier categoría del catálogo. `GET /api/logs/inject/categorias` informa por categoría si su
+emisor está disponible, para avisar antes de intentar inyectar.

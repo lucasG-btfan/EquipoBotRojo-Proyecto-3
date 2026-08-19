@@ -98,7 +98,11 @@ DASHBOARD_USER=admin
 DASHBOARD_PASSWORD=<completar>
 JWT_SECRET=<completar>
 FRONTEND_ORIGIN=http://localhost:5173
+SYSLOG_HOST=syslog-ng
+SYSLOG_PORT=514
 ```
+
+> `SYSLOG_HOST` / `SYSLOG_PORT` (CH07): destino del `logger` que usa el inyector de logs de prueba. Valores por defecto funcionales para el stack actual — no requieren configuración adicional salvo que se renombre el colector syslog.
 
 
 > `fail2ban-exporter` no se consume directamente: expone métricas en formato texto plano de Prometheus, no JSON. Todas las métricas relacionadas con Fail2ban (`fail2ban_banned_ips`, `fail2ban_up`, etc.) se obtienen consultando la API de Prometheus (`PROMETHEUS_URL/api/v1/query`), que ya las tiene scrapeadas.
