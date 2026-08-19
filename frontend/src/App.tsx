@@ -3,6 +3,7 @@ import { Layout } from './components/layout/Layout'
 import { Placeholder } from './components/layout/Placeholder'
 import { ProtectedRoute } from './components/layout/ProtectedRoute'
 import { DashboardPage } from './pages/DashboardPage'
+import { InicioPage } from './pages/InicioPage'
 import { LoginPage } from './pages/LoginPage'
 
 /**
@@ -26,7 +27,7 @@ export function App() {
           </ProtectedRoute>
         }
       >
-        <Route path="inicio" element={<Placeholder titulo="Inicio" />} />
+        <Route path="inicio" element={<InicioPage />} />
         <Route path="panel" element={<DashboardPage />} />
         <Route path="logs" element={<Placeholder titulo="Logs y detección" />} />
         <Route path="ips" element={<Placeholder titulo="Gestión de IPs" />} />
