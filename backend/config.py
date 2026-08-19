@@ -25,7 +25,10 @@ class Settings(BaseSettings):
     WAZUH_PASSWORD: str = ""
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_HOURS: int = 8
-    ALERTS_LOG_PATH: str = "logs/alerts.log"
+    ALERTS_LOG_PATH: str = "logs/security/alerts.log"
+    # Destino del `logger` del inyector de logs de prueba (CH07).
+    SYSLOG_HOST: str = "syslog-ng"
+    SYSLOG_PORT: int = 514
 
     model_config = {
         "env_file": str(Path(__file__).resolve().parent / ".env"),
