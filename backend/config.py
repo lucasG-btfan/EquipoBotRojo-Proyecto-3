@@ -33,6 +33,14 @@ class Settings(BaseSettings):
     # para el stack actual — no requieren `.env` salvo que se renombren.
     FAIL2BAN_CONTAINER: str = "fail2ban"
     FAIL2BAN_JAIL: str = "n8n-soar-jail"
+    # Conexión al indexador de Wazuh (OpenSearch, puerto publicado 9201) para
+    # el conteo de alertas nativas (CH12). No confundir con WAZUH_URL, que
+    # apunta a la API del manager (55000) y no se usa para este endpoint.
+    WAZUH_INDEXER_URL: str = "https://localhost:9201"
+    WAZUH_INDEXER_USER: str = "admin"
+    WAZUH_INDEXER_PASSWORD: str = ""
+    WAZUH_ALERTS_INDEX: str = "wazuh-alerts-*"
+    WAZUH_VERIFY_TLS: bool = False
 
     model_config = {
         "env_file": str(Path(__file__).resolve().parent / ".env"),

@@ -4,6 +4,6 @@ from pydantic import BaseModel
 
 
 class ConteoAlertasWazuhSchema(BaseModel):
-    """Schema de respuesta para el conteo de alertas Wazuh."""
-    total: int = 0
-    por_severidad: dict[str, int] = {}
+    """Schema de respuesta para el conteo de alertas nativas de Wazuh."""
+    total: int
+    mensaje: str

@@ -102,11 +102,18 @@ SYSLOG_HOST=syslog-ng
 SYSLOG_PORT=514
 FAIL2BAN_CONTAINER=fail2ban
 FAIL2BAN_JAIL=n8n-soar-jail
+WAZUH_INDEXER_URL=https://localhost:9201
+WAZUH_INDEXER_USER=admin
+WAZUH_INDEXER_PASSWORD=<completar>
+WAZUH_ALERTS_INDEX=wazuh-alerts-*
+WAZUH_VERIFY_TLS=False
 ```
 
 > `SYSLOG_HOST` / `SYSLOG_PORT` (CH07): destino del `logger` que usa el inyector de logs de prueba. Valores por defecto funcionales para el stack actual — no requieren configuración adicional salvo que se renombre el colector syslog.
 
 > `FAIL2BAN_CONTAINER` / `FAIL2BAN_JAIL` (CH11): contenedor y jail que consulta `GET /api/fail2ban/jail` vía `fail2ban-client status` dentro del contenedor. Valores por defecto funcionales para el stack actual (`fail2ban` / `n8n-soar-jail`) — no requieren configuración adicional salvo que se renombre el contenedor o la jail.
+
+> `WAZUH_INDEXER_URL` / `WAZUH_INDEXER_USER` / `WAZUH_INDEXER_PASSWORD` / `WAZUH_ALERTS_INDEX` / `WAZUH_VERIFY_TLS` (CH12): conexión al **indexador** de Wazuh (OpenSearch, puerto publicado `9201`) que consulta `GET /api/wazuh/alerts/count` vía `_count` sobre el índice `WAZUH_ALERTS_INDEX`. No confundir con `WAZUH_URL` / `WAZUH_USER` / `WAZUH_PASSWORD`, que apuntan a la API del *manager* (`55000`) y no se usan para este endpoint — ver `openspec/changes/api-wazuh/design.md` §1.
 
 
 > `fail2ban-exporter` no se consume directamente: expone métricas en formato texto plano de Prometheus, no JSON. Todas las métricas relacionadas con Fail2ban (`fail2ban_banned_ips`, `fail2ban_up`, etc.) se obtienen consultando la API de Prometheus (`PROMETHEUS_URL/api/v1/query`), que ya las tiene scrapeadas.
