@@ -4,7 +4,7 @@
 
 Define el comportamiento de la sesión del dashboard SIEM en el navegador: cómo el operador inicia sesión con usuario y contraseña, cómo se persiste y se usa el token de sesión, cómo se cierra la sesión y bajo qué condiciones el acceso a las secciones del dashboard queda bloqueado.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Pantalla de acceso
 

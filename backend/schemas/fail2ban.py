@@ -5,9 +5,9 @@ from pydantic import BaseModel
 
 class JailSchema(BaseModel):
     """Schema de respuesta para el estado de la jail."""
-    nombre: str
-    estado: str
-    total_baneadas: int = 0
+    jail: str
+    baneadas: int
+    ips: list[str]
 
 
 class IPBaneadaSchema(BaseModel):

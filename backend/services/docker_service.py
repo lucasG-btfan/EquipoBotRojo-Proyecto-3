@@ -56,6 +56,12 @@ def _traducir_error(e: Exception) -> ErrorDocker:
     return ErrorDocker(f"Error inesperado al consultar Docker: {e}")
 
 
+# Alias públicos para que otros servicios (p. ej. `fail2ban_service`, CH11)
+# reutilicen el acceso a Docker sin depender de nombres privados del módulo.
+crear_cliente = _crear_cliente
+traducir_error = _traducir_error
+
+
 def _obtener_puerto(contenedor) -> str | None:
     """Extrae el primer puerto publicado del contenedor, si existe."""
     puertos = contenedor.ports or {}

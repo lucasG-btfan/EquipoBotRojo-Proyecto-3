@@ -1,4 +1,10 @@
-## ADDED Requirements
+# Métricas y alertas de Prometheus
+
+## Purpose
+
+Define el comportamiento del endpoint que expone el estado de las 3 alertas de Prometheus y las métricas de Fail2ban obtenidas vía la API de Prometheus.
+
+## Requirements
 
 ### Requirement: Endpoint de alertas y métricas Prometheus
 

@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     # Destino del `logger` del inyector de logs de prueba (CH07).
     SYSLOG_HOST: str = "syslog-ng"
     SYSLOG_PORT: int = 514
+    # Contenedor y jail de Fail2ban a consultar (CH11). Defaults funcionales
+    # para el stack actual — no requieren `.env` salvo que se renombren.
+    FAIL2BAN_CONTAINER: str = "fail2ban"
+    FAIL2BAN_JAIL: str = "n8n-soar-jail"
 
     model_config = {
         "env_file": str(Path(__file__).resolve().parent / ".env"),

@@ -41,6 +41,11 @@ El sistema DEBE permitir filtrar tickets por su campo `status` mediante el query
 
 Cada item de la respuesta DEBE contener los campos: `id`, `ticket_number`, `title`, `description`, `status`, `priority`, `category`, `source_ip`, `threat_score`, `assigned_to`, `created_at`, `updated_at`, `alert_reference`.
 
+#### Scenario: Ticket con todos los campos presentes
+
+- **WHEN** el sistema retorna un ticket dentro de `items`
+- **THEN** el objeto incluye los campos `id`, `ticket_number`, `title`, `description`, `status`, `priority`, `category`, `source_ip`, `threat_score`, `assigned_to`, `created_at`, `updated_at` y `alert_reference`
+
 ### Requirement: Autenticación requerida
 
 Todas las peticiones a `GET /api/tickets` DEBEN incluir un token de sesión válido en el header `Authorization: Bearer {token}`.
