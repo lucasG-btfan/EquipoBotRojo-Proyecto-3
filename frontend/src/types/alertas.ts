@@ -29,7 +29,15 @@ export interface Alerta {
   threat_intel: unknown | null
 }
 
-/** `backend/schemas/patron_ataque.py` -> PatronAtaqueSchema */
+/**
+ * `backend/schemas/patron_ataque.py` -> PatronAtaqueSchema`.
+ *
+ * `recent_count` y `window_start` están declarados como requeridos en el
+ * schema Pydantic, pero `GET /api/ips/attack-patterns` (backend/routers/ips.py)
+ * arma los `items` a mano y serializa solo 8 campos: nunca emite estos dos.
+ * Se declaran opcionales para reflejar la respuesta real del backend en vez
+ * de mentirle al compilador (ver openspec/changes/ui-gestion-ips/design.md D2).
+ */
 export interface PatronAtaque {
   id: number
   pattern_type: string
@@ -39,8 +47,8 @@ export interface PatronAtaque {
   last_seen: string | null
   occurrence_count: number
   is_blocked: boolean
-  recent_count: number
-  window_start: string | null
+  recent_count?: number
+  window_start?: string | null
 }
 
 /** `backend/schemas/prometheus.py` -> AlertaPrometheusSchema */

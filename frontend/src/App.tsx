@@ -3,6 +3,7 @@ import { Layout } from './components/layout/Layout'
 import { Placeholder } from './components/layout/Placeholder'
 import { ProtectedRoute } from './components/layout/ProtectedRoute'
 import { DashboardPage } from './pages/DashboardPage'
+import { GestionIpsPage } from './pages/GestionIpsPage'
 import { InicioPage } from './pages/InicioPage'
 import { LoginPage } from './pages/LoginPage'
 import { LogsDeteccionPage } from './pages/LogsDeteccionPage'
@@ -31,7 +32,7 @@ export function App() {
         <Route path="inicio" element={<InicioPage />} />
         <Route path="panel" element={<DashboardPage />} />
         <Route path="logs" element={<LogsDeteccionPage />} />
-        <Route path="ips" element={<Placeholder titulo="Gestión de IPs" />} />
+        <Route path="ips" element={<GestionIpsPage />} />
         <Route path="tickets" element={<Placeholder titulo="Tickets" />} />
         <Route path="fail2ban" element={<Placeholder titulo="Fail2ban" />} />
         <Route path="prometheus" element={<Placeholder titulo="Prometheus" />} />
