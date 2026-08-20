@@ -5,6 +5,7 @@ import { ProtectedRoute } from './components/layout/ProtectedRoute'
 import { DashboardPage } from './pages/DashboardPage'
 import { InicioPage } from './pages/InicioPage'
 import { LoginPage } from './pages/LoginPage'
+import { LogsDeteccionPage } from './pages/LogsDeteccionPage'
 
 /**
  * Árbol de rutas (ver design.md D7). La sección "Dashboard" vive en
@@ -29,7 +30,7 @@ export function App() {
       >
         <Route path="inicio" element={<InicioPage />} />
         <Route path="panel" element={<DashboardPage />} />
-        <Route path="logs" element={<Placeholder titulo="Logs y detección" />} />
+        <Route path="logs" element={<LogsDeteccionPage />} />
         <Route path="ips" element={<Placeholder titulo="Gestión de IPs" />} />
         <Route path="tickets" element={<Placeholder titulo="Tickets" />} />
         <Route path="fail2ban" element={<Placeholder titulo="Fail2ban" />} />

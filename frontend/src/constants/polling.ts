@@ -17,4 +17,6 @@ export const INTERVALOS_POLLING = {
   DASHBOARD: 30000,
   /** Estado de las alertas de Prometheus. */
   PROMETHEUS: 30000,
+  /** Historial de ejecuciones de workflows (sección Logs y detección). */
+  HISTORIAL_WORKFLOWS: 3000,
 } as const
