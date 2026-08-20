@@ -7,6 +7,7 @@ import { GestionIpsPage } from './pages/GestionIpsPage'
 import { InicioPage } from './pages/InicioPage'
 import { LoginPage } from './pages/LoginPage'
 import { LogsDeteccionPage } from './pages/LogsDeteccionPage'
+import { TicketsPage } from './pages/TicketsPage'
 
 /**
  * Árbol de rutas (ver design.md D7). La sección "Dashboard" vive en
@@ -33,7 +34,7 @@ export function App() {
         <Route path="panel" element={<DashboardPage />} />
         <Route path="logs" element={<LogsDeteccionPage />} />
         <Route path="ips" element={<GestionIpsPage />} />
-        <Route path="tickets" element={<Placeholder titulo="Tickets" />} />
+        <Route path="tickets" element={<TicketsPage />} />
         <Route path="fail2ban" element={<Placeholder titulo="Fail2ban" />} />
         <Route path="prometheus" element={<Placeholder titulo="Prometheus" />} />
         <Route path="wazuh" element={<Placeholder titulo="Wazuh" />} />
