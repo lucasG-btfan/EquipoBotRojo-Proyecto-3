@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 import httpx
 
 from backend.config import settings
+
+logger = logging.getLogger("backend.services.n8n")
 
 # ── Timeout para requests a n8n (segundos) ──────────────────────────────────
 TIMEOUT_N8N = 10.0
@@ -90,6 +93,7 @@ async def obtener_historial_ejecuciones(workflow_id: str, limite: int = 10) -> l
     y accesible. Si la API key no está configurada, retorna una lista vacía.
     """
     if not settings.N8N_API_KEY:
+        logger.warning("N8N_API_KEY no configurada — no se puede obtener historial de ejecuciones")
         return []
 
     headers = {
@@ -104,18 +108,35 @@ async def obtener_historial_ejecuciones(workflow_id: str, limite: int = 10) -> l
                 params={"workflowId": workflow_id, "limit": limite},
                 headers=headers,
             )
-    except (httpx.ConnectError, httpx.TimeoutException, httpx.HTTPError):
+    except (httpx.ConnectError, httpx.TimeoutException, httpx.HTTPError) as e:
+        logger.warning("Error al consultar historial de n8n: %s", e)
         return []
 
     if respuesta.status_code != 200:
+        logger.warning("n8n respondió HTTP %d al consultar historial: %s", respuesta.status_code, respuesta.text[:200])
         return []
 
     try:
         datos = respuesta.json()
     except ValueError:
+        logger.warning("Respuesta de n8n no es JSON válido al consultar historial")
         return []
 
-    ejecuciones_raw = datos.get("data", {}).get("results", datos.get("results", []))
+    logger.debug("Respuesta cruda de n8n (tipo=%s, keys=%s)", type(datos).__name__, list(datos.keys()) if isinstance(datos, dict) else "N/A (lista)")
+
+    # n8n puede devolver distintos formatos según versión:
+    #   (a) {"data": {"results": [...]}}  → dict con data.results
+    #   (b) {"data": [...]}               → dict con data como lista
+    #   (c) [{"id": 1, ...}, ...]          → lista directa
+    ejecuciones_raw: list[dict] = []
+    if isinstance(datos, list):
+        ejecuciones_raw = [e for e in datos if isinstance(e, dict)]
+    elif isinstance(datos, dict):
+        data = datos.get("data", {})
+        if isinstance(data, dict):
+            ejecuciones_raw = data.get("results", [])
+        elif isinstance(data, list):
+            ejecuciones_raw = [e for e in data if isinstance(e, dict)]
 
     ejecuciones = []
     for e in ejecuciones_raw:
@@ -140,6 +161,7 @@ async def obtener_historial_ejecuciones(workflow_id: str, limite: int = 10) -> l
             "duracion_segundos": duracion,
         })
 
+    logger.info("Historial de n8n: %d ejecuciones obtenidas para workflow %s", len(ejecuciones), workflow_id)
     return ejecuciones
 
 

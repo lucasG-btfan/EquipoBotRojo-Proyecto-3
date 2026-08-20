@@ -106,3 +106,60 @@ async def obtener_estado_jail() -> dict:
         raise ErrorFail2ban(f"Error inesperado al consultar Fail2ban: {e}") from e
 
     return _parsear_estado_jail(salida)
+
+
+def _ejecutar_ban_sync(contenedor_nombre: str, jail: str, ip: str) -> None:
+    """Ejecuta `fail2ban-client set <jail> banip <ip>` dentro del contenedor de Fail2ban.
+
+    Llamada síncrona y bloqueante — se ejecuta dentro de `asyncio.to_thread`.
+    """
+    cliente = crear_cliente()
+    try:
+        try:
+            contenedor = cliente.containers.get(contenedor_nombre)
+        except docker.errors.NotFound as e:
+            raise ErrorFail2ban(
+                f"El contenedor de Fail2ban no está disponible: no existe '{contenedor_nombre}'"
+            ) from e
+
+        if contenedor.status != "running":
+            raise ErrorFail2ban(
+                f"El contenedor de Fail2ban no está disponible: '{contenedor_nombre}' "
+                f"está en estado '{contenedor.status}'"
+            )
+
+        try:
+            resultado = contenedor.exec_run(["fail2ban-client", "set", jail, "banip", ip])
+        except docker.errors.APIError as e:
+            raise traducir_error(e) from e
+
+        salida = (resultado.output or b"").decode("utf-8", errors="replace")
+
+        if resultado.exit_code != 0:
+            raise ErrorFail2ban(
+                f"Fail2ban respondió un error al banear IP {ip} en jail '{jail}': {salida.strip()}"
+            )
+    except ErrorDocker as e:
+        raise ErrorFail2ban(f"No se pudo contactar al demonio Docker: {e}") from e
+    finally:
+        cliente.close()
+
+
+async def banear_ip(ip: str) -> dict:
+    """Banea una IP en la jail de Fail2ban configurada por variables de entorno."""
+    contenedor = settings.FAIL2BAN_CONTAINER
+    jail = settings.FAIL2BAN_JAIL
+
+    try:
+        await asyncio.wait_for(
+            asyncio.to_thread(_ejecutar_ban_sync, contenedor, jail, ip),
+            timeout=TIMEOUT_FAIL2BAN,
+        )
+    except asyncio.TimeoutError as e:
+        raise ErrorFail2ban("Se agotó el tiempo de espera banneando IP") from e
+    except ErrorFail2ban:
+        raise
+    except Exception as e:
+        raise ErrorFail2ban(f"Error inesperado al banear IP: {e}") from e
+
+    return {"ip": ip, "jail": jail, "mensaje": f"IP {ip} baneada correctamente en {jail}"}

@@ -14,6 +14,9 @@ from backend.models.ip_bloqueada import IPBloqueada
 from backend.models.patron_ataque import PatronAtaque
 from backend.models.metrica_sistema import MetricaSistema
 
+from backend.services import fail2ban_service
+from backend.services.fail2ban_service import ErrorFail2ban
+
 router = APIRouter(prefix="/api", tags=["IPs"])
 
 logger = logging.getLogger("backend.routers.ips")
@@ -134,6 +137,34 @@ async def desbloquear_ip(ip: str, usuario: dict = Depends(usuario_actual)):
         raise HTTPException(
             status_code=500,
             detail=f"Error al desbanear IP {ip}: {str(e)}",
+        )
+
+
+@router.post("/ips/{ip}/ban")
+async def banear_ip(ip: str, usuario: dict = Depends(usuario_actual)):
+    """Banea una IP ejecutando fail2ban-client vía Docker.
+
+    End-point de prueba para verificar que la cadena fail2ban funciona.
+    """
+    try:
+        # Validar formato de IP
+        if not re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", ip):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Formato de IP inválido: {ip}",
+            )
+
+        resultado = await fail2ban_service.banear_ip(ip)
+        return resultado
+
+    except HTTPException:
+        raise
+    except ErrorFail2ban as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al banear IP {ip}: {str(e)}",
         )
 
 

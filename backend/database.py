@@ -7,15 +7,17 @@ from sqlalchemy.orm import DeclarativeBase
 from backend.config import settings
 
 # AGENTS.md documenta DATABASE_URL sin driver explícito (postgresql://...);
-# el motor async requiere el driver asyncpg en la URL.
+# el motor async requiere el driver psycopg en la URL (psycopg3 funciona
+# nativamente en Windows, a diferencia de asyncpg que falla con WinError 64).
 _database_url = make_url(settings.DATABASE_URL)
 if _database_url.drivername == "postgresql":
-    _database_url = _database_url.set(drivername="postgresql+asyncpg")
+    _database_url = _database_url.set(drivername="postgresql+psycopg")
 
 engine = create_async_engine(
     _database_url,
-    pool_timeout=3,
-    connect_args={"timeout": 5},
+    pool_timeout=10,
+    pool_recycle=1800,
+    connect_args={"connect_timeout": 10},
 )
 
 async_session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
