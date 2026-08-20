@@ -25,19 +25,19 @@ async def obtener_tpw(usuario: dict = Depends(usuario_actual)):
     try:
         ejecuciones = await n8n_service.obtener_historial_principal(limite=20)
 
-        duraciones_validas = [
+        historial = [
             e["duracion_segundos"]
             for e in ejecuciones
             if e.get("duracion_segundos") is not None
         ]
 
-        promedio = round(sum(duraciones_validas) / len(duraciones_validas), 3) if duraciones_validas else 0.0
-        ultima = duraciones_validas[0] if duraciones_validas else None
+        promedio = round(sum(historial) / len(historial), 3) if historial else 0.0
+        valor_actual = historial[0] if historial else None
 
         return {
-            "promedio_segundos": promedio,
-            "ultima_ejecucion_segundos": ultima,
-            "ejecuciones": ejecuciones,
+            "valor_actual": valor_actual,
+            "promedio": promedio,
+            "historial": historial,
         }
     except N8nConnectionError as e:
         raise HTTPException(status_code=503, detail=f"No se pudo conectar con n8n: {e}")
