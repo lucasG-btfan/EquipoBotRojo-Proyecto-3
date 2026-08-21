@@ -8,6 +8,7 @@ import { InicioPage } from './pages/InicioPage'
 import { LoginPage } from './pages/LoginPage'
 import { LogsDeteccionPage } from './pages/LogsDeteccionPage'
 import { Fail2banPage } from './pages/Fail2banPage'
+import { PrometheusPage } from './pages/PrometheusPage'
 import { TicketsPage } from './pages/TicketsPage'
 
 /**
@@ -37,7 +38,7 @@ export function App() {
         <Route path="ips" element={<GestionIpsPage />} />
         <Route path="tickets" element={<TicketsPage />} />
         <Route path="fail2ban" element={<Fail2banPage />} />
-        <Route path="prometheus" element={<Placeholder titulo="Prometheus" />} />
+        <Route path="prometheus" element={<PrometheusPage />} />
         <Route path="wazuh" element={<Placeholder titulo="Wazuh" />} />
       </Route>
 
