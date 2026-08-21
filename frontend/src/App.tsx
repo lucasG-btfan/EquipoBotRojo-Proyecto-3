@@ -1,6 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { Layout } from './components/layout/Layout'
-import { Placeholder } from './components/layout/Placeholder'
 import { ProtectedRoute } from './components/layout/ProtectedRoute'
 import { DashboardPage } from './pages/DashboardPage'
 import { GestionIpsPage } from './pages/GestionIpsPage'
@@ -10,6 +9,7 @@ import { LogsDeteccionPage } from './pages/LogsDeteccionPage'
 import { Fail2banPage } from './pages/Fail2banPage'
 import { PrometheusPage } from './pages/PrometheusPage'
 import { TicketsPage } from './pages/TicketsPage'
+import { WazuhPage } from './pages/WazuhPage'
 
 /**
  * Árbol de rutas (ver design.md D7). La sección "Dashboard" vive en
@@ -39,7 +39,7 @@ export function App() {
         <Route path="tickets" element={<TicketsPage />} />
         <Route path="fail2ban" element={<Fail2banPage />} />
         <Route path="prometheus" element={<PrometheusPage />} />
-        <Route path="wazuh" element={<Placeholder titulo="Wazuh" />} />
+        <Route path="wazuh" element={<WazuhPage />} />
       </Route>
 
       <Route path="/" element={<Navigate to="/dashboard/inicio" replace />} />

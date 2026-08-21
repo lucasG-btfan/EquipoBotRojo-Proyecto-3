@@ -34,7 +34,7 @@ export function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-fondo px-4">
-      <div className="w-full max-w-sm rounded-lg border border-borde bg-superficie p-8">
+      <div className="w-full max-w-sm rounded-lg border border-borde bg-superficie p-8 max-lg:p-6">
         <h1 className="text-center text-xl font-semibold text-slate-100">Panel SIEM</h1>
         <p className="mt-2 text-center text-sm text-slate-400">
           Ingresá tus credenciales para acceder al panel.
@@ -51,7 +51,7 @@ export function LoginPage() {
               autoComplete="username"
               value={usuario}
               onChange={(evento) => setUsuario(evento.target.value)}
-              className="rounded-md border border-borde bg-fondo px-3 py-2 text-sm text-slate-100 outline-none focus:border-primario"
+              className="rounded-md border border-borde bg-fondo px-3 py-2 text-sm text-slate-100 outline-none focus:border-primario max-lg:text-base"
             />
           </div>
 
@@ -65,7 +65,7 @@ export function LoginPage() {
               autoComplete="current-password"
               value={contraseña}
               onChange={(evento) => setContraseña(evento.target.value)}
-              className="rounded-md border border-borde bg-fondo px-3 py-2 text-sm text-slate-100 outline-none focus:border-primario"
+              className="rounded-md border border-borde bg-fondo px-3 py-2 text-sm text-slate-100 outline-none focus:border-primario max-lg:text-base"
             />
           </div>
 
@@ -74,7 +74,7 @@ export function LoginPage() {
           <button
             type="submit"
             disabled={cargando}
-            className="mt-2 rounded-md bg-primario px-3 py-2 text-sm font-medium text-slate-100 transition-colors hover:bg-primario/90 disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-2 rounded-md bg-primario px-3 py-2 text-sm font-medium text-slate-100 transition-colors hover:bg-primario/90 disabled:cursor-not-allowed disabled:opacity-60 max-lg:py-2.5"
           >
             {cargando ? 'Ingresando...' : 'Ingresar'}
           </button>

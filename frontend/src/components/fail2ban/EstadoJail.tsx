@@ -47,7 +47,7 @@ export function EstadoJail() {
     <div className="flex flex-col gap-4">
       {/* Card resumen */}
       <Card>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between max-lg:flex-wrap max-lg:gap-2">
           <div>
             <h3 className="text-sm font-semibold text-slate-100">
               Jail: <span className="font-mono text-primario">{datos?.jail ?? '—'}</span>
@@ -60,7 +60,7 @@ export function EstadoJail() {
             type="button"
             onClick={() => void refrescar()}
             disabled={cargando}
-            className="flex items-center gap-2 rounded-md border border-borde px-3 py-1.5 text-sm text-slate-200 transition-colors hover:bg-borde/30 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex items-center gap-2 rounded-md border border-borde px-3 py-1.5 text-sm text-slate-200 transition-colors hover:bg-borde/30 disabled:cursor-not-allowed disabled:opacity-50 max-lg:py-2"
           >
             <RefreshCw size={14} className={cargando ? 'animate-spin' : ''} />
             Actualizar
@@ -68,7 +68,7 @@ export function EstadoJail() {
         </div>
 
         <div className="mt-4 flex items-baseline gap-3">
-          <span className="text-4xl font-bold text-peligro">
+          <span className="text-4xl font-bold text-peligro max-lg:text-3xl">
             {datos?.baneadas ?? 0}
           </span>
           <span className="text-sm text-slate-300">

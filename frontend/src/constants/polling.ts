@@ -19,4 +19,6 @@ export const INTERVALOS_POLLING = {
   PROMETHEUS: 30000,
   /** Historial de ejecuciones de workflows (sección Logs y detección). */
   HISTORIAL_WORKFLOWS: 3000,
+  /** Conteo de alertas nativas de Wazuh (sección Wazuh). */
+  WAZUH: 10000,
 } as const

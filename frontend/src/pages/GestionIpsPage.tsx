@@ -8,8 +8,8 @@ import { TablaMetricasSistema } from '../components/gestion-ips/TablaMetricasSis
  */
 export function GestionIpsPage() {
   return (
-    <div className="flex flex-col gap-6 p-6 lg:p-8">
-      <h1 className="text-2xl font-bold text-slate-100">Gestión de IPs</h1>
+    <div className="flex flex-col gap-6 p-6 lg:p-8 max-lg:gap-4 max-lg:p-4">
+      <h1 className="text-2xl font-bold text-slate-100 max-lg:text-xl">Gestión de IPs</h1>
 
       <section>
         <TablaIpsBloqueadas />

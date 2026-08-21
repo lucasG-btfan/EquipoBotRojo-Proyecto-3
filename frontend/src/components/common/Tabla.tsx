@@ -44,7 +44,7 @@ export function Tabla<T>({
           <thead className="bg-fondo text-slate-400">
             <tr>
               {columnas.map((columna) => (
-                <th key={String(columna.clave)} className="px-4 py-2 font-medium">
+                <th key={String(columna.clave)} className="px-4 py-2 font-medium max-lg:px-3">
                   {columna.encabezado}
                 </th>
               ))}
@@ -71,7 +71,7 @@ export function Tabla<T>({
               items.map((fila) => (
                 <tr key={claveFila(fila)} className="text-slate-200">
                   {columnas.map((columna) => (
-                    <td key={String(columna.clave)} className="px-4 py-2">
+                    <td key={String(columna.clave)} className="px-4 py-2 max-lg:px-3">
                       {columna.render ? columna.render(fila) : String(fila[columna.clave] ?? '')}
                     </td>
                   ))}
@@ -90,7 +90,7 @@ export function Tabla<T>({
             type="button"
             disabled={!hayAnterior}
             onClick={() => onCambiarOffset(Math.max(offset - limit, 0))}
-            className="rounded-md border border-borde px-3 py-1 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-md border border-borde px-3 py-1 disabled:cursor-not-allowed disabled:opacity-40 max-lg:px-4 max-lg:py-2"
           >
             Anterior
           </button>
@@ -98,7 +98,7 @@ export function Tabla<T>({
             type="button"
             disabled={!haySiguiente}
             onClick={() => onCambiarOffset(offset + limit)}
-            className="rounded-md border border-borde px-3 py-1 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-md border border-borde px-3 py-1 disabled:cursor-not-allowed disabled:opacity-40 max-lg:px-4 max-lg:py-2"
           >
             Siguiente
           </button>

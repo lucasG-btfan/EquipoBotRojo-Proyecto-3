@@ -133,7 +133,7 @@ export function PanelAlertas() {
         <button
           type="button"
           onClick={() => void refrescar()}
-          className="mt-3 flex items-center gap-2 rounded-md border border-borde px-3 py-1.5 text-sm text-slate-200 transition-colors hover:bg-borde/30"
+          className="mt-3 flex items-center gap-2 rounded-md border border-borde px-3 py-1.5 text-sm text-slate-200 transition-colors hover:bg-borde/30 max-lg:py-2"
         >
           <RefreshCw size={14} />
           Reintentar
@@ -167,7 +167,7 @@ export function PanelAlertas() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between max-lg:flex-wrap max-lg:gap-2">
         <p className="text-xs text-slate-400">
           Última actualización: {formatearUltimaActualizacion(datos?.ultima_actualizacion ?? null)}
         </p>
@@ -175,7 +175,7 @@ export function PanelAlertas() {
           type="button"
           onClick={() => void refrescar()}
           disabled={cargando}
-          className="flex items-center gap-2 rounded-md border border-borde px-3 py-1.5 text-sm text-slate-200 transition-colors hover:bg-borde/30 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex items-center gap-2 rounded-md border border-borde px-3 py-1.5 text-sm text-slate-200 transition-colors hover:bg-borde/30 disabled:cursor-not-allowed disabled:opacity-50 max-lg:py-2"
         >
           <RefreshCw size={14} className={cargando ? 'animate-spin' : ''} />
           Actualizar

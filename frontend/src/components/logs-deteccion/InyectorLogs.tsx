@@ -104,7 +104,7 @@ export function InyectorLogs() {
           <select
             value={categoriaSeleccionada}
             onChange={(e) => setCategoriaSeleccionada(e.target.value)}
-            className="rounded-lg border border-borde bg-superficie px-3 py-2 text-sm text-slate-200 focus:border-primario focus:outline-none"
+            className="rounded-lg border border-borde bg-superficie px-3 py-2 text-sm text-slate-200 focus:border-primario focus:outline-none max-lg:text-base"
           >
             {categorias.map((cat) => (
               <option

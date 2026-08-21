@@ -187,7 +187,7 @@ export function TablaTickets() {
             <select
               value={filtroEstado}
               onChange={(evento) => cambiarFiltroEstado(evento.target.value as FiltroEstadoTicket)}
-              className="rounded-md border border-borde bg-fondo px-3 py-1.5 text-sm text-slate-200"
+              className="rounded-md border border-borde bg-fondo px-3 py-1.5 text-sm text-slate-200 max-lg:py-2 max-lg:text-base"
             >
               <option value="todos">Todos</option>
               {ESTADOS_TICKET_CONOCIDOS.map((estado) => (
@@ -204,7 +204,7 @@ export function TablaTickets() {
               onChange={(evento) =>
                 cambiarFiltroPrioridad(evento.target.value as FiltroPrioridadTicket)
               }
-              className="rounded-md border border-borde bg-fondo px-3 py-1.5 text-sm text-slate-200"
+              className="rounded-md border border-borde bg-fondo px-3 py-1.5 text-sm text-slate-200 max-lg:py-2 max-lg:text-base"
             >
               <option value="todas">Todas</option>
               {PRIORIDADES_TICKET_CONOCIDAS.map((prioridad) => (
@@ -217,7 +217,7 @@ export function TablaTickets() {
           <button
             type="button"
             onClick={() => void consultar()}
-            className="rounded-md border border-borde px-3 py-1.5 text-sm text-slate-200 hover:bg-borde/30"
+            className="rounded-md border border-borde px-3 py-1.5 text-sm text-slate-200 hover:bg-borde/30 max-lg:py-2"
           >
             Actualizar
           </button>

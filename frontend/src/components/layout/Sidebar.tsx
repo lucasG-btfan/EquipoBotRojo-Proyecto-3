@@ -20,8 +20,8 @@ interface SeccionNav {
 
 // Las 8 secciones canónicas del dashboard (AGENTS.md). "Dashboard" vive en
 // /dashboard/panel para no colisionar con /dashboard, el prefijo del área
-// protegida (ver design.md D7).
-const SECCIONES: SeccionNav[] = [
+// protegida (ver design.md D7). Exportado también para BarraNavegacion.
+export const SECCIONES: SeccionNav[] = [
   { etiqueta: 'Inicio', ruta: '/dashboard/inicio', Icono: Home },
   { etiqueta: 'Dashboard', ruta: '/dashboard/panel', Icono: LayoutDashboard },
   { etiqueta: 'Logs y detección', ruta: '/dashboard/logs', Icono: FileSearch },
@@ -42,7 +42,7 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="flex h-screen w-64 shrink-0 flex-col border-r border-borde bg-superficie">
+    <aside className="flex h-screen w-64 shrink-0 flex-col border-r border-borde bg-superficie max-lg:hidden">
       <div className="border-b border-borde px-6 py-5">
         <h1 className="text-lg font-semibold text-slate-100">Panel SIEM</h1>
       </div>

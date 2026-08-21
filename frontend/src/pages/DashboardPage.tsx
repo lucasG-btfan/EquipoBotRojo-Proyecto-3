@@ -95,7 +95,7 @@ interface KpiCardProps {
 function KpiCard({ titulo, valor, icono, variante }: KpiCardProps) {
   return (
     <Card className="flex items-center gap-4">
-      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primario/15 text-primario">
+      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primario/15 text-primario max-lg:h-10 max-lg:w-10">
         {icono}
       </div>
       <div className="min-w-0 flex-1">
@@ -185,8 +185,8 @@ export function DashboardPage() {
   const hayError = errorContenedores || errorPrometheus || errorAlertas || errorTpw
 
   return (
-    <div className="flex flex-col gap-6 p-6 lg:p-8">
-      <h1 className="text-2xl font-bold text-slate-100">Dashboard</h1>
+    <div className="flex flex-col gap-6 p-6 lg:p-8 max-lg:gap-4 max-lg:p-4">
+      <h1 className="text-2xl font-bold text-slate-100 max-lg:text-xl">Dashboard</h1>
 
       {/* ——— Fila de KPI cards ——— */}
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

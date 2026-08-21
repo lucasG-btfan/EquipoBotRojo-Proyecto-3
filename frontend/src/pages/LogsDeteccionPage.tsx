@@ -10,8 +10,8 @@ import { HistorialWorkflows } from '../components/logs-deteccion/HistorialWorkfl
  */
 export function LogsDeteccionPage() {
   return (
-    <div className="flex flex-col gap-6 p-6 lg:p-8">
-      <h1 className="text-2xl font-bold text-slate-100">Logs y detección</h1>
+    <div className="flex flex-col gap-6 p-6 lg:p-8 max-lg:gap-4 max-lg:p-4">
+      <h1 className="text-2xl font-bold text-slate-100 max-lg:text-xl">Logs y detección</h1>
 
       {/* Visor de logs — ancho completo */}
       <section>

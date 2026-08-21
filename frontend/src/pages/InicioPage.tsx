@@ -112,12 +112,12 @@ export function InicioPage() {
   const salud = calcularSalud(contenedores, error)
 
   return (
-    <div className="flex flex-col gap-8 p-6 lg:p-8">
+    <div className="flex flex-col gap-8 p-6 lg:p-8 max-lg:gap-5 max-lg:p-4">
       {/* ——— Hero section ——— */}
-      <section className="rounded-lg border border-borde bg-superficie p-8 lg:p-12">
-        <div className="flex flex-col items-start gap-6">
+      <section className="rounded-lg border border-borde bg-superficie p-8 lg:p-12 max-lg:p-5">
+        <div className="flex flex-col items-start gap-6 max-lg:gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-slate-100 lg:text-4xl">SIEM Dashboard</h1>
+            <h1 className="text-3xl font-bold text-slate-100 lg:text-4xl max-lg:text-2xl">SIEM Dashboard</h1>
             <p className="mt-3 max-w-2xl text-slate-400">
               Panel de control centralizado para el sistema de detección de intrusiones.
               Monitoreo en tiempo real, automatización de respuesta y gestión de incidentes

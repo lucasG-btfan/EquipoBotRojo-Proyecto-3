@@ -123,19 +123,19 @@ export function TablaPatronesAtaque() {
             value={filtroIp}
             onChange={(evento) => cambiarFiltroIp(evento.target.value)}
             placeholder="192.168.100.50"
-            className="rounded-md border border-borde bg-fondo px-3 py-1.5 text-sm text-slate-200 placeholder:text-slate-500"
+            className="rounded-md border border-borde bg-fondo px-3 py-1.5 text-sm text-slate-200 placeholder:text-slate-500 max-lg:w-full max-lg:py-2 max-lg:text-base"
           />
           <input
             type="text"
             value={filtroCategoria}
             onChange={(evento) => cambiarFiltroCategoria(evento.target.value)}
             placeholder="brute_force"
-            className="rounded-md border border-borde bg-fondo px-3 py-1.5 text-sm text-slate-200 placeholder:text-slate-500"
+            className="rounded-md border border-borde bg-fondo px-3 py-1.5 text-sm text-slate-200 placeholder:text-slate-500 max-lg:w-full max-lg:py-2 max-lg:text-base"
           />
           <button
             type="button"
             onClick={limpiarFiltros}
-            className="rounded-md border border-borde px-3 py-1.5 text-sm text-slate-200 hover:bg-borde/30"
+            className="rounded-md border border-borde px-3 py-1.5 text-sm text-slate-200 hover:bg-borde/30 max-lg:py-2"
           >
             Limpiar filtros
           </button>

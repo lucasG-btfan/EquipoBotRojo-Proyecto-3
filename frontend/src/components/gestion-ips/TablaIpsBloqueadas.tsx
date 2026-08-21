@@ -200,7 +200,7 @@ export function TablaIpsBloqueadas() {
           <select
             value={filtroEstado}
             onChange={(evento) => cambiarFiltro(evento.target.value as FiltroEstadoIp)}
-            className="rounded-md border border-borde bg-fondo px-3 py-1.5 text-sm text-slate-200"
+            className="rounded-md border border-borde bg-fondo px-3 py-1.5 text-sm text-slate-200 max-lg:py-2 max-lg:text-base"
           >
             <option value="activas">Activas</option>
             <option value="inactivas">Inactivas</option>
@@ -209,7 +209,7 @@ export function TablaIpsBloqueadas() {
           <button
             type="button"
             onClick={() => void consultar()}
-            className="rounded-md border border-borde px-3 py-1.5 text-sm text-slate-200 hover:bg-borde/30"
+            className="rounded-md border border-borde px-3 py-1.5 text-sm text-slate-200 hover:bg-borde/30 max-lg:py-2"
           >
             Actualizar
           </button>
