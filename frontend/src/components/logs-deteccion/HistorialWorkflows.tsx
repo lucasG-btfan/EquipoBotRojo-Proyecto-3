@@ -1,3 +1,4 @@
+import { useCallback } from 'react'
 import { usePolling } from '../../hooks/usePolling'
 import { INTERVALOS_POLLING } from '../../constants/polling'
 import { Spinner } from '../common/Spinner'
@@ -6,9 +7,10 @@ import type { VarianteBadge } from '../common/Badge'
 import apiClient from '../../services/apiClient'
 import type { HistorialWorkflow } from '../../types/workflows'
 
-/** Formatea segundos a string legible: "Xs" o "Xm Ys". */
+/** Formatea segundos a string legible: "Xms", "Xs" o "Xm Ys". */
 function formatearTiempo(segundos: number | null): string {
-  if (segundos === null || segundos === undefined || segundos === 0) return '—'
+  if (segundos === null || segundos === undefined) return '—'
+  if (segundos < 1) return `${Math.round(segundos * 1000)}ms`
   if (segundos < 60) return `${segundos.toFixed(1)}s`
   const minutos = Math.floor(segundos / 60)
   const segs = Math.round(segundos % 60)
@@ -49,28 +51,32 @@ function textoEstado(status: string): string {
   return status
 }
 
-/** Tabla de historial de ejecuciones de workflows con polling cada 3 s. */
-export function HistorialWorkflows() {
-  const {
-    datos,
-    cargando,
-    error,
-  } = usePolling<HistorialWorkflow>(
+interface HistorialWorkflowsProps {
+  /** Título de la sección (ej. "Historial de workflows"). */
+  titulo: string
+  /** Endpoint del backend a consultar (ej. "/api/workflows/runs"). */
+  endpoint: string
+  /** Si se muestra la columna "Logs procesados" (solo aplica al principal). */
+  mostrarItemsProcesados?: boolean
+}
+
+/** Tabla de historial de ejecuciones de un workflow, con polling cada 3 s. */
+export function HistorialWorkflows({ titulo, endpoint, mostrarItemsProcesados = false }: HistorialWorkflowsProps) {
+  const peticion = useCallback(
     async () => {
-      const respuesta = await apiClient.get<HistorialWorkflow>(
-        '/api/workflows/runs',
-        { params: { limit: 10 } },
-      )
+      const respuesta = await apiClient.get<HistorialWorkflow>(endpoint, { params: { limit: 10 } })
       return respuesta.data
     },
-    INTERVALOS_POLLING.HISTORIAL_WORKFLOWS,
+    [endpoint],
   )
+
+  const { datos, cargando, error } = usePolling<HistorialWorkflow>(peticion, INTERVALOS_POLLING.HISTORIAL_WORKFLOWS)
 
   const ejecuciones = datos?.ejecuciones ?? []
 
   return (
     <div>
-      <h2 className="mb-4 text-lg font-semibold text-slate-100">Historial de workflows</h2>
+      <h2 className="mb-4 text-lg font-semibold text-slate-100">{titulo}</h2>
 
       {cargando && !datos ? (
         <div className="flex items-center gap-2 text-slate-400">
@@ -93,6 +99,8 @@ export function HistorialWorkflows() {
                 <th className="px-4 py-3">Fin</th>
                 <th className="px-4 py-3">Estado</th>
                 <th className="px-4 py-3">Duración</th>
+                {mostrarItemsProcesados && <th className="px-4 py-3">Logs procesados</th>}
+                <th className="px-4 py-3">Error</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-borde">
@@ -114,6 +122,14 @@ export function HistorialWorkflows() {
                   </td>
                   <td className="whitespace-nowrap px-4 py-2.5">
                     {formatearTiempo(ejecucion.duracion_segundos)}
+                  </td>
+                  {mostrarItemsProcesados && (
+                    <td className="whitespace-nowrap px-4 py-2.5">
+                      {ejecucion.items_procesados ?? '—'}
+                    </td>
+                  )}
+                  <td className="max-w-xs truncate px-4 py-2.5 text-xs text-peligro" title={ejecucion.error ?? undefined}>
+                    {ejecucion.error ?? '—'}
                   </td>
                 </tr>
               ))}

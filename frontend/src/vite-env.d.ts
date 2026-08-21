@@ -2,6 +2,8 @@
 
 interface ImportMetaEnv {
   readonly VITE_API_URL: string
+  readonly VITE_KIBANA_URL?: string
+  readonly VITE_WAZUH_URL?: string
 }
 
 interface ImportMeta {

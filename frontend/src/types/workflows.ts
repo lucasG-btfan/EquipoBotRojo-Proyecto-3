@@ -20,6 +20,10 @@ export interface EjecucionWorkflow {
   status: string
   /** Duración total en segundos o null si no se pudo calcular. */
   duracion_segundos: number | null
+  /** Mensaje de error de n8n, solo presente cuando `status` no es "success". */
+  error: string | null
+  /** Cantidad de logs procesados. Solo se calcula para el workflow principal. */
+  items_procesados: number | null
 }
 
 /** Respuesta paginada del endpoint GET /api/workflows/runs. */

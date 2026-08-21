@@ -24,9 +24,17 @@ export function LogsDeteccionPage() {
         <InyectorLogs />
       </section>
 
-      {/* Historial de workflows — ancho completo */}
+      {/* Historial de workflows — ancho completo, uno por workflow */}
       <section>
-        <HistorialWorkflows />
+        <HistorialWorkflows
+          titulo="Historial de workflows"
+          endpoint="/api/workflows/runs"
+          mostrarItemsProcesados
+        />
+      </section>
+
+      <section>
+        <HistorialWorkflows titulo="Historial de métricas" endpoint="/api/workflows/metrics/runs" />
       </section>
     </div>
   )

@@ -6,7 +6,7 @@ import {
   Ticket,
   Lock,
   Flame,
-  Eye,
+  BarChart3,
   LogOut,
 } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router-dom'
@@ -29,7 +29,7 @@ export const SECCIONES: SeccionNav[] = [
   { etiqueta: 'Tickets', ruta: '/dashboard/tickets', Icono: Ticket },
   { etiqueta: 'Fail2ban', ruta: '/dashboard/fail2ban', Icono: Lock },
   { etiqueta: 'Prometheus', ruta: '/dashboard/prometheus', Icono: Flame },
-  { etiqueta: 'Wazuh', ruta: '/dashboard/wazuh', Icono: Eye },
+  { etiqueta: 'Estadísticas', ruta: '/dashboard/estadisticas', Icono: BarChart3 },
 ]
 
 export function Sidebar() {

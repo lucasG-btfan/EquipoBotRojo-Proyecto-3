@@ -19,7 +19,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json.datos_originales || $input.first().json;\n\n// 1. Extraer la IP atacante\nconst sourceIp = input.source_ip || \"0.0.0.0\";\n\n// 2. Sincronizar Prioridad con el Score (70 = HIGH)\nconst score = input.risk_score || 0;\nconst finalPriority = score >= 80 ? 'critical' : score >= 60 ? 'high' : 'medium';\n\nreturn [{\n    json: {\n        ticket_number: 'TICKET-LOG-' + Math.random().toString(36).substr(2, 6).toUpperCase(),\n        title: `[DETECCIÓN] ${input.rule_name || \"Ataque SSH\"}`,\n        description: input.description,\n        status: 'open',\n        priority: $('Definir campo de origen').first().json.datos_originales.severity,\n        category: `HIDS/Logs-${input.rule_name}`,\n        source_ip: sourceIp,\n        threat_score: score,\n        assigned_to: 'rafa.legendsss@gmail.com',\n        created_at: new Date().toISOString(),\n        // 3. RELLENAR ALERT_REFERENCE (para que no salga null)\n        alert_reference: input.alert_reference\n    }\n}];"
+        "jsCode": "const input = $input.first().json.datos_originales || $input.first().json;\n\n// 1. Extraer la IP atacante\nconst sourceIp = input.source_ip || \"0.0.0.0\";\n\n// 2. Sincronizar Prioridad con el Score (70 = HIGH)\nconst score = input.risk_score || 0;\nconst finalPriority = score >= 80 ? 'critical' : score >= 60 ?\n'high' : 'medium';\nconst ruleName = input.rule_name || \"\";\nconst blockDecision = input.block_decision || \"\";\n\n// Eventos que generan bloqueo → resolved\n// Eventos de sistema sin bloqueo → open\nconst eventosConBloqueo = [\n  'Root Login Attempt',\n  'SSH Failed Password', \n  'Access Denied',\n  'Port Scan',\n  'Iptables Drop'\n];\n\nconst statusTicket = (eventosConBloqueo.includes(ruleName) || blockDecision === 'block') \n  ? 'resolved' \n  : 'open';\nreturn [{\n    json: {\n        ticket_number: 'TICKET-LOG-' + Math.random().toString(36).substr(2, 6).toUpperCase(),\n        title: `[DETECCIÓN] ${input.rule_name || \"Ataque SSH\"}`,\n        description: input.description,\n        status: statusTicket,\n        priority: $('Definir campo de origen').first().json.datos_originales.severity,\n        category: `HIDS/Logs-${input.rule_name}`,\n        source_ip: sourceIp,\n        threat_score: score,\n        assigned_to: 'rafa.legendsss@gmail.com',\n        created_at: new Date().toISOString(),\n        alert_reference: input.alert_reference\n    }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -750,7 +750,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "448cb9ef-e466-4c4a-841e-266c3f73ef38",
+  "versionId": "4324d146-df79-4f5b-aed2-4cc55129364c",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "7478c350e39689cddadf155b6c5aead67e0635cfe1aa4e6d60c18ecb354db193"

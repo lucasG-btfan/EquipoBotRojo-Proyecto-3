@@ -4,12 +4,13 @@ import { ProtectedRoute } from './components/layout/ProtectedRoute'
 import { DashboardPage } from './pages/DashboardPage'
 import { GestionIpsPage } from './pages/GestionIpsPage'
 import { InicioPage } from './pages/InicioPage'
+import { LandingPage } from './pages/LandingPage'
 import { LoginPage } from './pages/LoginPage'
 import { LogsDeteccionPage } from './pages/LogsDeteccionPage'
 import { Fail2banPage } from './pages/Fail2banPage'
 import { PrometheusPage } from './pages/PrometheusPage'
 import { TicketsPage } from './pages/TicketsPage'
-import { WazuhPage } from './pages/WazuhPage'
+import { EstadisticasPage } from './pages/EstadisticasPage'
 
 /**
  * Árbol de rutas (ver design.md D7). La sección "Dashboard" vive en
@@ -22,6 +23,7 @@ import { WazuhPage } from './pages/WazuhPage'
 export function App() {
   return (
     <Routes>
+      <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
 
       <Route
@@ -39,11 +41,10 @@ export function App() {
         <Route path="tickets" element={<TicketsPage />} />
         <Route path="fail2ban" element={<Fail2banPage />} />
         <Route path="prometheus" element={<PrometheusPage />} />
-        <Route path="wazuh" element={<WazuhPage />} />
+        <Route path="estadisticas" element={<EstadisticasPage />} />
       </Route>
 
-      <Route path="/" element={<Navigate to="/dashboard/inicio" replace />} />
-      <Route path="*" element={<Navigate to="/dashboard/inicio" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }
