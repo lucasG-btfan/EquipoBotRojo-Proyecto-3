@@ -24,17 +24,17 @@ export function LogsDeteccionPage() {
         <InyectorLogs />
       </section>
 
-      {/* Historial de workflows — ancho completo, uno por workflow */}
-      <section>
+      {/* Historial de workflows — ancho completo, uno por workflow, colapsables */}
+      <section className="flex flex-col gap-3">
         <HistorialWorkflows
           titulo="Historial del workflow principal de análisis"
           endpoint="/api/workflows/runs"
           mostrarItemsProcesados
+          abiertoPorDefecto
         />
-      </section>
-
-      <section>
         <HistorialWorkflows titulo="Historial de métricas" endpoint="/api/workflows/metrics/runs" />
+        <HistorialWorkflows titulo="Historial de autobloqueo de IPs" endpoint="/api/workflows/bloqueo/runs" />
+        <HistorialWorkflows titulo="Historial de tickets" endpoint="/api/workflows/tickets/runs" />
       </section>
     </div>
   )

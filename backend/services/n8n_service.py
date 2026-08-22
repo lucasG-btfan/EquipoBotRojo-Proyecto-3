@@ -401,3 +401,13 @@ async def obtener_historial_principal(limite: int = 10) -> list[dict]:
 async def obtener_historial_metricas(limite: int = 10) -> list[dict]:
     """Obtiene el historial del workflow de métricas de Prometheus."""
     return await obtener_historial_ejecuciones(settings.N8N_WORKFLOW_ID_METRICAS, limite)
+
+
+async def obtener_historial_tickets(limite: int = 10) -> list[dict]:
+    """Obtiene el historial del workflow de generación de tickets."""
+    return await obtener_historial_ejecuciones(settings.N8N_WORKFLOW_ID_TICKETS, limite)
+
+
+async def obtener_historial_bloqueo(limite: int = 10) -> list[dict]:
+    """Obtiene el historial del workflow de autobloqueo de IPs."""
+    return await obtener_historial_ejecuciones(settings.N8N_WORKFLOW_ID_BLOQUEO, limite)

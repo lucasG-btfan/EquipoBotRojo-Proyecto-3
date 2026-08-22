@@ -4,6 +4,7 @@ import { INTERVALOS_POLLING } from '../../constants/polling'
 import { Spinner } from '../common/Spinner'
 import { Badge } from '../common/Badge'
 import type { VarianteBadge } from '../common/Badge'
+import { Colapsable } from '../common/Colapsable'
 import apiClient from '../../services/apiClient'
 import type { HistorialWorkflow } from '../../types/workflows'
 
@@ -58,13 +59,20 @@ interface HistorialWorkflowsProps {
   endpoint: string
   /** Si se muestra la columna "Logs procesados" (solo aplica al principal). */
   mostrarItemsProcesados?: boolean
+  /** Si arranca expandido. Por defecto colapsado, para no ocupar espacio. */
+  abiertoPorDefecto?: boolean
 }
 
-/** Tabla de historial de ejecuciones de un workflow, con polling cada 3 s. */
-export function HistorialWorkflows({ titulo, endpoint, mostrarItemsProcesados = false }: HistorialWorkflowsProps) {
+/** Sección colapsable con la tabla de historial de un workflow, con polling cada 3 s. */
+export function HistorialWorkflows({
+  titulo,
+  endpoint,
+  mostrarItemsProcesados = false,
+  abiertoPorDefecto = false,
+}: HistorialWorkflowsProps) {
   const peticion = useCallback(
     async () => {
-      const respuesta = await apiClient.get<HistorialWorkflow>(endpoint, { params: { limit: 10 } })
+      const respuesta = await apiClient.get<HistorialWorkflow>(endpoint, { params: { limit: 20 } })
       return respuesta.data
     },
     [endpoint],
@@ -75,9 +83,11 @@ export function HistorialWorkflows({ titulo, endpoint, mostrarItemsProcesados = 
   const ejecuciones = datos?.ejecuciones ?? []
 
   return (
-    <div>
-      <h2 className="mb-4 text-lg font-semibold text-slate-100">{titulo}</h2>
-
+    <Colapsable
+      titulo={titulo}
+      abiertoPorDefecto={abiertoPorDefecto}
+      accesorio={datos && <span className="text-xs text-slate-400">Últimas {ejecuciones.length} ejecuciones</span>}
+    >
       {cargando && !datos ? (
         <div className="flex items-center gap-2 text-slate-400">
           <Spinner tamano={16} />
@@ -90,7 +100,7 @@ export function HistorialWorkflows({ titulo, endpoint, mostrarItemsProcesados = 
       ) : ejecuciones.length === 0 ? (
         <p className="text-sm text-slate-400">No hay ejecuciones registradas.</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-borde bg-superficie">
+        <div className="overflow-x-auto rounded-lg border border-borde">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-borde text-xs text-slate-400">
@@ -137,6 +147,6 @@ export function HistorialWorkflows({ titulo, endpoint, mostrarItemsProcesados = 
           </table>
         </div>
       )}
-    </div>
+    </Colapsable>
   )
 }

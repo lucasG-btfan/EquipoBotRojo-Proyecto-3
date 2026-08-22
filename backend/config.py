@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     # nunca hardcodeando en el servicio.
     N8N_WORKFLOW_ID_PRINCIPAL: str = "lvOKCttBHjp2xkDd"
     N8N_WORKFLOW_ID_METRICAS: str = "KwOhjOOaA56Sgm3E"
+    N8N_WORKFLOW_ID_TICKETS: str = ""
+    N8N_WORKFLOW_ID_BLOQUEO: str = ""
     PROMETHEUS_URL: str = "http://localhost:9090"
     # Endpoint del demonio Docker. Esquemas admitidos por el SDK `docker`:
     #   npipe://...        -> Docker Desktop en Windows (named pipe, no expone socket Unix)
