@@ -147,11 +147,6 @@ export function TablaIpsBloqueadas() {
       render: (fila) => formatearFecha(fila.blocked_at),
     },
     {
-      clave: 'blocked_until',
-      encabezado: 'Expira',
-      render: (fila) => formatearFecha(fila.blocked_until),
-    },
-    {
       clave: 'is_active',
       encabezado: 'Estado',
       render: (fila) =>

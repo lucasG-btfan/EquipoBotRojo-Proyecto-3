@@ -120,6 +120,14 @@
       "sessions": 0,
       "memories": 1,
       "prompts": 0
+    },
+    {
+      "id": "7a607521",
+      "created_by": "rafan",
+      "created_at": "2026-08-22T16:13:19Z",
+      "sessions": 0,
+      "memories": 1,
+      "prompts": 0
     }
   ]
 }
