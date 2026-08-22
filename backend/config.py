@@ -10,6 +10,11 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+asyncpg://db_user:db_pass@localhost:5432/security_monitoring"
     N8N_URL: str = "http://localhost:5678"
     N8N_API_KEY: str = ""
+    # IDs de los workflows en n8n cuyo historial consulta el backend. Si un
+    # workflow se recrea en n8n recibe un ID nuevo: actualizar aquí o en `.env`,
+    # nunca hardcodeando en el servicio.
+    N8N_WORKFLOW_ID_PRINCIPAL: str = "lvOKCttBHjp2xkDd"
+    N8N_WORKFLOW_ID_METRICAS: str = "KwOhjOOaA56Sgm3E"
     PROMETHEUS_URL: str = "http://localhost:9090"
     # Endpoint del demonio Docker. Esquemas admitidos por el SDK `docker`:
     #   npipe://...        -> Docker Desktop en Windows (named pipe, no expone socket Unix)

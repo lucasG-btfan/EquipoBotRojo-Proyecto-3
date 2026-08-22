@@ -2,15 +2,23 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import time
+from collections import OrderedDict
+
 import httpx
 
 from backend.config import settings
 
 logger = logging.getLogger("backend.services.n8n")
 
-# ── Timeout para requests a n8n (segundos) ──────────────────────────────────
+# ── Timeouts para requests a n8n (segundos) ─────────────────────────────────
+# Webhooks: disparan workflows que pueden tardar en aceptarse → margen amplio.
 TIMEOUT_N8N = 10.0
+# Consultas de API (historial/detalles): el panel las consulta por polling,
+# una respuesta lenta satura el backend → timeout corto.
+TIMEOUT_N8N_API = 5.0
 
 # ── URLs de webhook de los workflows ────────────────────────────────────────
 # Estos webhooks están configurados como triggers adicionales en los workflows
@@ -19,8 +27,9 @@ WEBHOOK_ANALISIS_URL = f"{settings.N8N_URL.rstrip('/')}/webhook/ejecutar-analisi
 WEBHOOK_METRICAS_URL = f"{settings.N8N_URL.rstrip('/')}/webhook/ejecutar-metricas"
 
 # ── IDs de los workflows (n8n) cuyo historial se muestra en el panel ───────
-WORKFLOW_ID_PRINCIPAL = "IlZkF2tpQcwn5ibI"
-WORKFLOW_ID_METRICAS = "S8KYnwHGovQ9pc7G"
+# Viven en la configuración (`N8N_WORKFLOW_ID_PRINCIPAL` /
+# `N8N_WORKFLOW_ID_METRICAS`): al recrear un workflow en n8n su ID cambia y
+# se actualiza por entorno, sin tocar código.
 
 # Nodo del workflow principal cuyo conteo de items de salida se usa como
 # "cantidad de logs procesados" — específico de la estructura actual de ese
@@ -28,6 +37,60 @@ WORKFLOW_ID_METRICAS = "S8KYnwHGovQ9pc7G"
 # nodo se renombra, el conteo vuelve a caer a `None` sin romper el endpoint.
 NODO_LOGS_ESTRUCTURADOS = "Estructurar Entradas de Log"
 NODO_SIN_ALERTAS = "Sin alertas"
+
+# ── Cliente HTTP compartido ────────────────────────────────────────────────
+# Un único cliente reutiliza conexiones (keep-alive) y evita crear un cliente
+# nuevo por llamada (que generaba flood de resoluciones DNS).
+_CLIENTE_HTTP: httpx.AsyncClient | None = None
+
+
+def _obtener_cliente() -> httpx.AsyncClient:
+    """Devuelve el cliente HTTP compartido, recreándolo si está cerrado."""
+    global _CLIENTE_HTTP
+    if _CLIENTE_HTTP is None or _CLIENTE_HTTP.is_closed:
+        _CLIENTE_HTTP = httpx.AsyncClient(
+            timeout=TIMEOUT_N8N,
+            limits=httpx.Limits(
+                max_connections=20,
+                max_keepalive_connections=10,
+                keepalive_expiry=30.0,
+            ),
+        )
+    return _CLIENTE_HTTP
+
+
+# ── Cache de detalles de ejecuciones FINALIZADAS ───────────────────────────
+# Una ejecución finalizada es inmutable: su detalle (error / items procesados)
+# nunca cambia. Cacheamos la respuesta de n8n por `execution_id` para no
+# repetir el fan-out de detalles en cada poll del frontend.
+_CACHE_DETALLES_TTL = 600.0  # 10 minutos
+_CACHE_DETALLES_MAX = 200
+_cache_detalles: OrderedDict[str, tuple[float, dict]] = OrderedDict()
+
+
+def _cache_detalle_get(execution_id: str) -> dict | None:
+    entrada = _cache_detalles.get(execution_id)
+    if entrada is None:
+        return None
+    ts, detalle = entrada
+    if time.monotonic() - ts > _CACHE_DETALLES_TTL:
+        _cache_detalles.pop(execution_id, None)
+        return None
+    _cache_detalles.move_to_end(execution_id)
+    return detalle
+
+
+def _cache_detalle_put(execution_id: str, detalle: dict) -> None:
+    _cache_detalles[execution_id] = (time.monotonic(), detalle)
+    _cache_detalles.move_to_end(execution_id)
+    while len(_cache_detalles) > _CACHE_DETALLES_MAX:
+        _cache_detalles.popitem(last=False)
+
+
+# Última respuesta válida del listado por workflow: ante un fallo puntual de
+# n8n se devuelve esta foto reciente en vez de vaciar el historial del panel.
+_ULTIMO_HISTORIAL_TTL = 120.0
+_ultimo_historial: dict[str, tuple[float, list[dict]]] = {}
 
 
 # ── Excepciones personalizadas ──────────────────────────────────────────────
@@ -51,8 +114,7 @@ async def disparar_webhook(url: str) -> dict:
     Retorna la respuesta del webhook (generalmente un JSON con confirmación).
     """
     try:
-        async with httpx.AsyncClient(timeout=TIMEOUT_N8N) as cliente:
-            respuesta = await cliente.post(url)
+        respuesta = await _obtener_cliente().post(url)
     except httpx.ConnectError as e:
         raise N8nConnectionError(
             f"No se pudo conectar con n8n en {settings.N8N_URL}: {e}"
@@ -108,18 +170,23 @@ async def obtener_detalle_ejecucion(execution_id: str) -> dict | None:
     if not execution_id or not settings.N8N_API_KEY:
         return None
 
+    # Ejecución finalizada → inmutable: si ya está cacheada, no se reconsulta.
+    detalle_cacheado = _cache_detalle_get(execution_id)
+    if detalle_cacheado is not None:
+        return detalle_cacheado
+
     headers = {
         "X-N8N-API-KEY": settings.N8N_API_KEY,
         "Accept": "application/json",
     }
 
     try:
-        async with httpx.AsyncClient(timeout=TIMEOUT_N8N) as cliente:
-            respuesta = await cliente.get(
-                f"{settings.N8N_URL.rstrip('/')}/api/v1/executions/{execution_id}",
-                params={"includeData": "true"},
-                headers=headers,
-            )
+        respuesta = await _obtener_cliente().get(
+            f"{settings.N8N_URL.rstrip('/')}/api/v1/executions/{execution_id}",
+            params={"includeData": "true"},
+            headers=headers,
+            timeout=TIMEOUT_N8N_API,
+        )
     except (httpx.ConnectError, httpx.TimeoutException, httpx.HTTPError) as e:
         logger.warning("Error al consultar detalle de ejecución %s: %s", execution_id, e)
         return None
@@ -133,9 +200,11 @@ async def obtener_detalle_ejecucion(execution_id: str) -> dict | None:
         return None
 
     try:
-        return respuesta.json()
+        detalle = respuesta.json()
     except ValueError:
         return None
+    _cache_detalle_put(execution_id, detalle)
+    return detalle
 
 
 def _extraer_mensaje_error(detalle: dict) -> str | None:
@@ -190,6 +259,27 @@ def _contar_items_procesados(detalle: dict) -> int | None:
 
 
 # ── Historial de ejecuciones (requiere API key de n8n) ─────────────────────
+def _historial_degradado(workflow_id: str) -> list[dict]:
+    """Devuelve la última foto válida del historial si sigue fresca, o [].
+
+    Ante un fallo puntual de n8n es mejor mostrar el último historial conocido
+    que vaciar el panel del usuario (degradación elegante).
+    """
+    snapshot = _ultimo_historial.get(workflow_id)
+    if snapshot is None:
+        return []
+    ts, datos = snapshot
+    antiguedad = time.monotonic() - ts
+    if antiguedad > _ULTIMO_HISTORIAL_TTL:
+        return []
+    logger.warning(
+        "n8n no respondió — se sirve última foto del historial de %s (%.0fs de antigüedad)",
+        workflow_id,
+        antiguedad,
+    )
+    return datos
+
+
 async def obtener_historial_ejecuciones(
     workflow_id: str,
     limite: int = 10,
@@ -210,25 +300,25 @@ async def obtener_historial_ejecuciones(
     }
 
     try:
-        async with httpx.AsyncClient(timeout=TIMEOUT_N8N) as cliente:
-            respuesta = await cliente.get(
-                f"{settings.N8N_URL.rstrip('/')}/api/v1/executions",
-                params={"workflowId": workflow_id, "limit": limite},
-                headers=headers,
-            )
+        respuesta = await _obtener_cliente().get(
+            f"{settings.N8N_URL.rstrip('/')}/api/v1/executions",
+            params={"workflowId": workflow_id, "limit": limite},
+            headers=headers,
+            timeout=TIMEOUT_N8N_API,
+        )
     except (httpx.ConnectError, httpx.TimeoutException, httpx.HTTPError) as e:
         logger.warning("Error al consultar historial de n8n: %s", e)
-        return []
+        return _historial_degradado(workflow_id)
 
     if respuesta.status_code != 200:
         logger.warning("n8n respondió HTTP %d al consultar historial: %s", respuesta.status_code, respuesta.text[:200])
-        return []
+        return _historial_degradado(workflow_id)
 
     try:
         datos = respuesta.json()
     except ValueError:
         logger.warning("Respuesta de n8n no es JSON válido al consultar historial")
-        return []
+        return _historial_degradado(workflow_id)
 
     logger.debug("Respuesta cruda de n8n (tipo=%s, keys=%s)", type(datos).__name__, list(datos.keys()) if isinstance(datos, dict) else "N/A (lista)")
 
@@ -246,6 +336,9 @@ async def obtener_historial_ejecuciones(
         elif isinstance(data, list):
             ejecuciones_raw = [e for e in data if isinstance(e, dict)]
 
+    # 1) Base del historial con los datos que ya trae el listado (sin llamadas
+    #    extra). El detalle completo solo se pide cuando aporta algo: mensaje
+    #    de error de una ejecución fallida, o conteo de items del principal.
     ejecuciones = []
     for e in ejecuciones_raw:
         started = e.get("startedAt", "")
@@ -263,29 +356,36 @@ async def obtener_historial_ejecuciones(
 
         status = e.get("finished", False) and "success" or e.get("status", "unknown")
 
-        error = None
-        items_procesados = None
-        # El detalle completo (includeData=true) es una llamada extra por
-        # ejecución — solo se pide cuando hace falta: para sacar el mensaje
-        # de error de una ejecución fallida, o el conteo de items del
-        # workflow principal.
-        if status != "success" or incluir_items_procesados:
-            detalle = await obtener_detalle_ejecucion(e.get("id", ""))
-            if detalle:
-                if status != "success":
-                    error = _extraer_mensaje_error(detalle)
-                if incluir_items_procesados:
-                    items_procesados = _contar_items_procesados(detalle)
-
         ejecuciones.append({
             "id": e.get("id", ""),
             "startedAt": started,
             "stoppedAt": stopped,
             "status": status,
             "duracion_segundos": duracion,
-            "error": error,
-            "items_procesados": items_procesados,
+            "error": None,
+            "items_procesados": None,
         })
+
+    # 2) Enriquecimiento en PARALELO: cada detalle es una llamada HTTP propia;
+    #    hacerlas en secuencia multiplicaba la latencia total por N ejecuciones.
+    async def _enriquecer(ejecucion: dict, necesita_error: bool, necesita_items: bool) -> None:
+        if not (necesita_error or necesita_items) or not ejecucion["id"]:
+            return
+        detalle = await obtener_detalle_ejecucion(ejecucion["id"])
+        if detalle is None:
+            return  # best-effort: el campo queda en None, el historial no se rompe
+        if necesita_error:
+            ejecucion["error"] = _extraer_mensaje_error(detalle)
+        if necesita_items:
+            ejecucion["items_procesados"] = _contar_items_procesados(detalle)
+
+    await asyncio.gather(*[
+        _enriquecer(e, necesita_error=e["status"] != "success",
+                    necesita_items=incluir_items_procesados)
+        for e in ejecuciones
+    ])
+
+    _ultimo_historial[workflow_id] = (time.monotonic(), ejecuciones)
 
     logger.info("Historial de n8n: %d ejecuciones obtenidas para workflow %s", len(ejecuciones), workflow_id)
     return ejecuciones
@@ -294,10 +394,10 @@ async def obtener_historial_ejecuciones(
 async def obtener_historial_principal(limite: int = 10) -> list[dict]:
     """Obtiene el historial del workflow principal, con conteo de logs procesados."""
     return await obtener_historial_ejecuciones(
-        WORKFLOW_ID_PRINCIPAL, limite, incluir_items_procesados=True
+        settings.N8N_WORKFLOW_ID_PRINCIPAL, limite, incluir_items_procesados=True
     )
 
 
 async def obtener_historial_metricas(limite: int = 10) -> list[dict]:
     """Obtiene el historial del workflow de métricas de Prometheus."""
-    return await obtener_historial_ejecuciones(WORKFLOW_ID_METRICAS, limite)
+    return await obtener_historial_ejecuciones(settings.N8N_WORKFLOW_ID_METRICAS, limite)
