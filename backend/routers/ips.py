@@ -4,9 +4,11 @@ import asyncio
 import logging
 import re
 import subprocess
+from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, select
+from sqlalchemy import cast, func, select
+from sqlalchemy.types import String as TipoTexto
 
 from backend.database import async_session_factory
 from backend.dependencies import usuario_actual
@@ -27,9 +29,11 @@ async def obtener_ips_bloqueadas(
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     activo: bool | None = Query(default=None),
+    motivo: str | None = Query(default=None),
     usuario: dict = Depends(usuario_actual),
 ):
-    """Retorna la tabla blocked_ips con paginación y filtro opcional por estado activo/inactivo."""
+    """Retorna la tabla blocked_ips con paginación, filtro por estado activo/inactivo
+    y búsqueda parcial (LIKE) por motivo (`reason`)."""
     try:
         async with async_session_factory() as session:
             # Filtro base
@@ -39,6 +43,11 @@ async def obtener_ips_bloqueadas(
             if activo is not None:
                 consulta = consulta.where(IPBloqueada.is_active == activo)
                 conteo = conteo.where(IPBloqueada.is_active == activo)
+
+            if motivo:
+                filtro_motivo = IPBloqueada.reason.ilike(f"%{motivo}%")
+                consulta = consulta.where(filtro_motivo)
+                conteo = conteo.where(filtro_motivo)
 
             # Conteo total
             total_result = await session.execute(conteo)
@@ -176,7 +185,7 @@ async def obtener_patrones_ataque(
     categoria: str | None = Query(default=None),
     usuario: dict = Depends(usuario_actual),
 ):
-    """Retorna la tabla attack_patterns paginada con filtro por IP/categoría."""
+    """Retorna la tabla attack_patterns paginada con búsqueda parcial (LIKE) por IP/categoría."""
     try:
         async with async_session_factory() as session:
             # Filtro base
@@ -184,12 +193,15 @@ async def obtener_patrones_ataque(
             conteo = select(func.count(PatronAtaque.id))
 
             if ip:
-                consulta = consulta.where(PatronAtaque.source_ip == ip)
-                conteo = conteo.where(PatronAtaque.source_ip == ip)
+                # source_ip es INET: se castea a texto para poder usar LIKE.
+                filtro_ip = cast(PatronAtaque.source_ip, TipoTexto).ilike(f"%{ip}%")
+                consulta = consulta.where(filtro_ip)
+                conteo = conteo.where(filtro_ip)
 
             if categoria:
-                consulta = consulta.where(PatronAtaque.pattern_type == categoria)
-                conteo = conteo.where(PatronAtaque.pattern_type == categoria)
+                filtro_categoria = PatronAtaque.pattern_type.ilike(f"%{categoria}%")
+                consulta = consulta.where(filtro_categoria)
+                conteo = conteo.where(filtro_categoria)
 
             # Conteo total
             total_result = await session.execute(conteo)
@@ -227,22 +239,32 @@ async def obtener_patrones_ataque(
 async def obtener_metricas_sistema(
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
+    desde: date | None = Query(default=None),
+    hasta: date | None = Query(default=None),
     usuario: dict = Depends(usuario_actual),
 ):
-    """Retorna la tabla system_metrics con paginación, ordenada por timestamp descendente."""
+    """Retorna la tabla system_metrics con paginación y filtro opcional por rango de
+    fechas (`desde`/`hasta`, inclusive), ordenada por timestamp descendente."""
     try:
         async with async_session_factory() as session:
+            consulta = select(MetricaSistema)
+            conteo = select(func.count(MetricaSistema.id))
+
+            if desde is not None:
+                consulta = consulta.where(MetricaSistema.timestamp >= datetime.combine(desde, datetime.min.time()))
+                conteo = conteo.where(MetricaSistema.timestamp >= datetime.combine(desde, datetime.min.time()))
+
+            if hasta is not None:
+                limite_superior = datetime.combine(hasta, datetime.min.time()) + timedelta(days=1)
+                consulta = consulta.where(MetricaSistema.timestamp < limite_superior)
+                conteo = conteo.where(MetricaSistema.timestamp < limite_superior)
+
             # Conteo total
-            total_result = await session.execute(select(func.count(MetricaSistema.id)))
+            total_result = await session.execute(conteo)
             total = total_result.scalar() or 0
 
             # Consulta paginada, ordenada por timestamp descendente
-            query = (
-                select(MetricaSistema)
-                .order_by(MetricaSistema.timestamp.desc())
-                .limit(limit)
-                .offset(offset)
-            )
+            query = consulta.order_by(MetricaSistema.timestamp.desc()).limit(limit).offset(offset)
             result = await session.execute(query)
             metricas = result.scalars().all()
 

@@ -21,7 +21,8 @@ function formatearFecha(timestamp: string | null): string {
 /**
  * Tabla paginada de `attack_patterns` con filtros por IP de origen y
  * categoría, ambos texto libre con debounce (ver design.md D3, D7). El
- * backend filtra por igualdad exacta y no expone catálogo de categorías.
+ * backend filtra por coincidencia parcial (LIKE) y no expone catálogo de
+ * categorías.
  */
 export function TablaPatronesAtaque() {
   const [respuesta, setRespuesta] = useState<RespuestaPaginada<PatronAtaque> | null>(null)
@@ -122,20 +123,20 @@ export function TablaPatronesAtaque() {
             type="text"
             value={filtroIp}
             onChange={(evento) => cambiarFiltroIp(evento.target.value)}
-            placeholder="192.168.100.50"
-            className="rounded-md border border-borde bg-fondo px-3 py-1.5 text-sm text-slate-200 placeholder:text-slate-500 max-lg:w-full max-lg:py-2 max-lg:text-base"
+            placeholder="Buscar por IP (ej. 192.168)…"
+            className="rounded-lg border border-borde bg-fondo px-4 py-2.5 text-base text-slate-200 placeholder:text-slate-500 focus:border-primario focus:outline-none max-lg:w-full"
           />
           <input
             type="text"
             value={filtroCategoria}
             onChange={(evento) => cambiarFiltroCategoria(evento.target.value)}
-            placeholder="brute_force"
-            className="rounded-md border border-borde bg-fondo px-3 py-1.5 text-sm text-slate-200 placeholder:text-slate-500 max-lg:w-full max-lg:py-2 max-lg:text-base"
+            placeholder="Buscar por categoría (ej. brute)…"
+            className="rounded-lg border border-borde bg-fondo px-4 py-2.5 text-base text-slate-200 placeholder:text-slate-500 focus:border-primario focus:outline-none max-lg:w-full"
           />
           <button
             type="button"
             onClick={limpiarFiltros}
-            className="rounded-md border border-borde px-3 py-1.5 text-sm text-slate-200 hover:bg-borde/30 max-lg:py-2"
+            className="rounded-lg border border-borde px-4 py-2.5 text-base font-medium text-slate-200 hover:bg-borde/30"
           >
             Limpiar filtros
           </button>

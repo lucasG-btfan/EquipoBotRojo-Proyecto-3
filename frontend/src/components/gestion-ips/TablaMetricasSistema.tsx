@@ -18,22 +18,47 @@ function formatearFecha(timestamp: string | null): string {
 }
 
 /**
- * Tabla paginada de `system_metrics` con polling cada 10 s (design.md D3,
- * D4). Un `useEffect` sobre `offset` fuerza un `refrescar()` inmediato al
- * cambiar de página, sin esperar al próximo tick del intervalo.
+ * Tabla paginada de `system_metrics` con polling cada 10 s y filtro opcional
+ * por rango de fechas (design.md D3, D4). Un `useEffect` sobre `offset` (y
+ * sobre el rango de fechas) fuerza un `refrescar()` inmediato, sin esperar
+ * al próximo tick del intervalo.
  */
 export function TablaMetricasSistema() {
   const [offset, setOffset] = useState<number>(0)
+  const [desde, setDesde] = useState<string>('')
+  const [hasta, setHasta] = useState<string>('')
 
   const { datos, cargando, error, refrescar } = usePolling<RespuestaPaginada<MetricaSistema>>(
-    () => obtenerMetricasSistema({ limit: FILAS_POR_PAGINA, offset }),
+    () =>
+      obtenerMetricasSistema({
+        limit: FILAS_POR_PAGINA,
+        offset,
+        desde: desde === '' ? undefined : desde,
+        hasta: hasta === '' ? undefined : hasta,
+      }),
     INTERVALOS_POLLING.METRICAS_SISTEMA,
   )
 
   useEffect(() => {
     void refrescar()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [offset])
+  }, [offset, desde, hasta])
+
+  const cambiarDesde = (valor: string) => {
+    setDesde(valor)
+    setOffset(0)
+  }
+
+  const cambiarHasta = (valor: string) => {
+    setHasta(valor)
+    setOffset(0)
+  }
+
+  const limpiarRango = () => {
+    setDesde('')
+    setHasta('')
+    setOffset(0)
+  }
 
   const columnas: ColumnaTabla<MetricaSistema>[] = [
     {
@@ -52,7 +77,38 @@ export function TablaMetricasSistema() {
 
   return (
     <div>
-      <h2 className="mb-4 text-lg font-semibold text-slate-100">Métricas del sistema</h2>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold text-slate-100">Métricas del sistema</h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-2 text-base font-medium text-slate-300">
+            Desde
+            <input
+              type="date"
+              value={desde}
+              max={hasta || undefined}
+              onChange={(evento) => cambiarDesde(evento.target.value)}
+              className="rounded-lg border border-borde bg-fondo px-4 py-2.5 text-base text-slate-200 focus:border-primario focus:outline-none"
+            />
+          </label>
+          <label className="flex items-center gap-2 text-base font-medium text-slate-300">
+            Hasta
+            <input
+              type="date"
+              value={hasta}
+              min={desde || undefined}
+              onChange={(evento) => cambiarHasta(evento.target.value)}
+              className="rounded-lg border border-borde bg-fondo px-4 py-2.5 text-base text-slate-200 focus:border-primario focus:outline-none"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={limpiarRango}
+            className="rounded-lg border border-borde px-4 py-2.5 text-base font-medium text-slate-200 hover:bg-borde/30"
+          >
+            Limpiar rango
+          </button>
+        </div>
+      </div>
 
       {error ? (
         <div className="rounded-lg border border-peligro/30 bg-peligro/10 p-4 text-sm text-peligro">

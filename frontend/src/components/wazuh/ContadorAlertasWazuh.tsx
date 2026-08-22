@@ -39,9 +39,9 @@ export function ContadorAlertasWazuh({
           type="button"
           onClick={onRefrescar}
           disabled={cargando}
-          className="flex items-center gap-2 rounded-md border border-borde px-3 py-1.5 text-sm text-slate-200 transition-colors hover:bg-borde/30 disabled:cursor-not-allowed disabled:opacity-50 max-lg:py-2"
+          className="flex items-center gap-2 rounded-lg border border-borde px-5 py-2.5 text-base font-medium text-slate-200 transition-colors hover:bg-borde/30 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <RefreshCw size={14} className={cargando ? 'animate-spin' : ''} />
+          <RefreshCw size={18} className={cargando ? 'animate-spin' : ''} />
           Actualizar
         </button>
       </div>
@@ -84,9 +84,9 @@ export function ContadorAlertasWazuh({
 
       {/* Nota fija (spec: Diferenciación frente a las alertas de n8n):
           siempre visible, con datos y ante error también. */}
-      <div className="mt-4 flex items-start gap-2 border-t border-borde pt-3">
-        <Info size={14} className="mt-0.5 shrink-0 text-slate-400" />
-        <p className="text-xs text-slate-400">
+      <div className="mt-4 flex items-start gap-2.5 border-t border-borde pt-4">
+        <Info size={16} className="mt-0.5 shrink-0 text-slate-400" />
+        <p className="text-sm text-slate-400">
           Las alertas de seguridad procesadas por el pipeline de n8n no se muestran en esta
           sección: se visualizan en las secciones Dashboard y Tickets.
         </p>

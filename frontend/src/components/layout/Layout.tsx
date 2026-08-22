@@ -11,7 +11,7 @@ import { BarraNavegacion } from './BarraNavegacion'
  */
 export function Layout() {
   return (
-    <div className="flex min-h-screen bg-fondo max-lg:flex-col">
+    <div className="flex min-h-screen bg-fondo max-lg:flex-col lg:h-screen lg:overflow-hidden">
       <BarraNavegacion />
       <Sidebar />
       <main className="flex-1 overflow-y-auto p-6 max-lg:p-4">

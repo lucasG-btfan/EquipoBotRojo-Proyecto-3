@@ -166,18 +166,18 @@ export function PanelAlertas() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between max-lg:flex-wrap max-lg:gap-2">
-        <p className="text-xs text-slate-400">
+        <p className="text-sm text-slate-400">
           Última actualización: {formatearUltimaActualizacion(datos?.ultima_actualizacion ?? null)}
         </p>
         <button
           type="button"
           onClick={() => void refrescar()}
           disabled={cargando}
-          className="flex items-center gap-2 rounded-md border border-borde px-3 py-1.5 text-sm text-slate-200 transition-colors hover:bg-borde/30 disabled:cursor-not-allowed disabled:opacity-50 max-lg:py-2"
+          className="flex items-center gap-2 rounded-lg border border-borde px-5 py-2.5 text-base font-medium text-slate-200 transition-colors hover:bg-borde/30 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <RefreshCw size={14} className={cargando ? 'animate-spin' : ''} />
+          <RefreshCw size={18} className={cargando ? 'animate-spin' : ''} />
           Actualizar
         </button>
       </div>
@@ -188,7 +188,7 @@ export function PanelAlertas() {
         </p>
       )}
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
         {alertas.map((alerta) => {
           const inicioFiring = inicioFiringRef.current[alerta.nombre]
           return (

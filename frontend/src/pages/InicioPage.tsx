@@ -154,15 +154,15 @@ export function InicioPage() {
 
       {/* ——— Grid de tecnologías ——— */}
       <section>
-        <h2 className="mb-4 text-lg font-semibold text-slate-100">Tecnologías del stack</h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <h2 className="mb-5 text-2xl font-semibold text-slate-100 max-lg:text-xl">Tecnologías del stack</h2>
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {TECNOLOGIAS.map((tech) => {
             const Icono = tech.icono
             return (
-              <Card key={tech.nombre} className="flex flex-col gap-3">
-                <Icono className="h-8 w-8 text-primario" />
-                <h3 className="text-sm font-semibold text-slate-100">{tech.nombre}</h3>
-                <p className="text-xs text-slate-400">{tech.descripcion}</p>
+              <Card key={tech.nombre} className="flex flex-col gap-4 p-6">
+                <Icono className="h-12 w-12 text-primario" />
+                <h3 className="text-xl font-semibold text-slate-100">{tech.nombre}</h3>
+                <p className="text-base text-slate-400">{tech.descripcion}</p>
               </Card>
             )
           })}

@@ -7,6 +7,8 @@ import { desbloquearIp, obtenerIpsBloqueadas, FILAS_POR_PAGINA } from '../../ser
 import type { RespuestaPaginada } from '../../types/comun'
 import type { FiltroEstadoIp, IPBloqueada } from '../../types/ips'
 
+const DEBOUNCE_MS = 400
+
 /** Formatea un timestamp ISO a formato local argentino, o `—` si es null. */
 function formatearFecha(timestamp: string | null): string {
   if (!timestamp) return '—'
@@ -35,6 +37,8 @@ export function TablaIpsBloqueadas() {
   const [error, setError] = useState<string | null>(null)
   const [offset, setOffset] = useState<number>(0)
   const [filtroEstado, setFiltroEstado] = useState<FiltroEstadoIp>('activas')
+  const [filtroMotivo, setFiltroMotivo] = useState<string>('')
+  const [filtroMotivoDebounced, setFiltroMotivoDebounced] = useState<string>('')
 
   const [ipEnConfirmacion, setIpEnConfirmacion] = useState<string | null>(null)
   const [ipEnProceso, setIpEnProceso] = useState<string | null>(null)
@@ -49,6 +53,7 @@ export function TablaIpsBloqueadas() {
         limit: FILAS_POR_PAGINA,
         offset,
         activo: activoDesdeFiltro(filtroEstado),
+        motivo: filtroMotivoDebounced.trim() === '' ? undefined : filtroMotivoDebounced.trim(),
       })
       setRespuesta(datos)
       setError(null)
@@ -62,7 +67,16 @@ export function TablaIpsBloqueadas() {
   useEffect(() => {
     void consultar()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [offset, filtroEstado])
+  }, [offset, filtroEstado, filtroMotivoDebounced])
+
+  useEffect(() => {
+    const idTimeout = setTimeout(() => {
+      setFiltroMotivoDebounced(filtroMotivo)
+      setOffset(0)
+    }, DEBOUNCE_MS)
+
+    return () => clearTimeout(idTimeout)
+  }, [filtroMotivo])
 
   useEffect(() => {
     return () => {
@@ -196,11 +210,18 @@ export function TablaIpsBloqueadas() {
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold text-slate-100">IPs bloqueadas</h2>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="text"
+            value={filtroMotivo}
+            onChange={(evento) => setFiltroMotivo(evento.target.value)}
+            placeholder="Buscar por motivo…"
+            className="rounded-lg border border-borde bg-fondo px-4 py-2.5 text-base text-slate-200 placeholder:text-slate-500 focus:border-primario focus:outline-none max-lg:w-full"
+          />
           <select
             value={filtroEstado}
             onChange={(evento) => cambiarFiltro(evento.target.value as FiltroEstadoIp)}
-            className="rounded-md border border-borde bg-fondo px-3 py-1.5 text-sm text-slate-200 max-lg:py-2 max-lg:text-base"
+            className="rounded-lg border border-borde bg-fondo px-4 py-2.5 text-base text-slate-200 focus:border-primario focus:outline-none"
           >
             <option value="activas">Activas</option>
             <option value="inactivas">Inactivas</option>
@@ -209,7 +230,7 @@ export function TablaIpsBloqueadas() {
           <button
             type="button"
             onClick={() => void consultar()}
-            className="rounded-md border border-borde px-3 py-1.5 text-sm text-slate-200 hover:bg-borde/30 max-lg:py-2"
+            className="rounded-lg border border-borde px-4 py-2.5 text-base font-medium text-slate-200 hover:bg-borde/30"
           >
             Actualizar
           </button>

@@ -34,6 +34,7 @@ const ESTADO_A_PRESENTACION: Record<string, { etiqueta: string; variante: Varian
 /** Etiqueta y variante de `Badge` según `priority` (design.md D6). Reserva `neutro` con el valor crudo. */
 const PRIORIDAD_A_PRESENTACION: Record<string, { etiqueta: string; variante: VarianteBadge }> = {
   critical: { etiqueta: 'Crítica', variante: 'peligro' },
+  high: { etiqueta: 'Alta', variante: 'naranja' },
   medium: { etiqueta: 'Media', variante: 'advertencia' },
   low: { etiqueta: 'Baja', variante: 'info' },
 }
@@ -181,13 +182,13 @@ export function TablaTickets() {
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold text-slate-100">Tickets de seguridad</h2>
-        <div className="flex items-center gap-3">
-          <label className="flex items-center gap-1.5 text-sm text-slate-300">
+        <div className="flex flex-wrap items-center gap-4">
+          <label className="flex items-center gap-2 text-base font-medium text-slate-300">
             Estado
             <select
               value={filtroEstado}
               onChange={(evento) => cambiarFiltroEstado(evento.target.value as FiltroEstadoTicket)}
-              className="rounded-md border border-borde bg-fondo px-3 py-1.5 text-sm text-slate-200 max-lg:py-2 max-lg:text-base"
+              className="rounded-lg border border-borde bg-fondo px-4 py-2.5 text-base text-slate-200 focus:border-primario focus:outline-none"
             >
               <option value="todos">Todos</option>
               {ESTADOS_TICKET_CONOCIDOS.map((estado) => (
@@ -197,14 +198,14 @@ export function TablaTickets() {
               ))}
             </select>
           </label>
-          <label className="flex items-center gap-1.5 text-sm text-slate-300">
+          <label className="flex items-center gap-2 text-base font-medium text-slate-300">
             Prioridad
             <select
               value={filtroPrioridad}
               onChange={(evento) =>
                 cambiarFiltroPrioridad(evento.target.value as FiltroPrioridadTicket)
               }
-              className="rounded-md border border-borde bg-fondo px-3 py-1.5 text-sm text-slate-200 max-lg:py-2 max-lg:text-base"
+              className="rounded-lg border border-borde bg-fondo px-4 py-2.5 text-base text-slate-200 focus:border-primario focus:outline-none"
             >
               <option value="todas">Todas</option>
               {PRIORIDADES_TICKET_CONOCIDAS.map((prioridad) => (
@@ -217,7 +218,7 @@ export function TablaTickets() {
           <button
             type="button"
             onClick={() => void consultar()}
-            className="rounded-md border border-borde px-3 py-1.5 text-sm text-slate-200 hover:bg-borde/30 max-lg:py-2"
+            className="rounded-lg border border-borde px-4 py-2.5 text-base font-medium text-slate-200 hover:bg-borde/30"
           >
             Actualizar
           </button>
@@ -227,6 +228,12 @@ export function TablaTickets() {
       {sinResultadosPorFiltro && (
         <div className="mb-3 rounded-lg border border-borde bg-fondo p-3 text-sm text-slate-400">
           No hay tickets para el filtro aplicado.
+        </div>
+      )}
+
+      {ticketSeleccionado && (
+        <div className="mb-4">
+          <DetalleTicket ticket={ticketSeleccionado} />
         </div>
       )}
 
@@ -242,12 +249,6 @@ export function TablaTickets() {
           claveFila={(fila) => fila.id}
           onCambiarOffset={setOffset}
         />
-      )}
-
-      {ticketSeleccionado && (
-        <div className="mt-4">
-          <DetalleTicket ticket={ticketSeleccionado} />
-        </div>
       )}
     </div>
   )

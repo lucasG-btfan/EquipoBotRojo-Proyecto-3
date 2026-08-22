@@ -29,6 +29,14 @@ function resolverMapeoEstado(estado: string): MapeoEstado {
   return MAPEO_ESTADOS[estado] ?? { variante: 'neutro', etiqueta: estado }
 }
 
+// Clases del contenedor según estado: el card entero se tiñe de rojo/amarillo
+// cuando la alerta está disparada/pendiente, no solo el badge, para que se
+// note de un vistazo sin tener que leer el texto.
+const CONTENEDOR_POR_ESTADO: Record<string, string> = {
+  firing: '!border-peligro/50 !bg-peligro/10',
+  pending: '!border-advertencia/50 !bg-advertencia/10',
+}
+
 /**
  * Componente presentacional puro: recibe props ya resueltas por
  * `PanelAlertas` y no realiza llamadas HTTP ni cálculos de tiempo
@@ -44,21 +52,21 @@ export function TarjetaAlerta({
   const { variante, etiqueta } = resolverMapeoEstado(estado)
 
   return (
-    <Card className="flex flex-col gap-3">
+    <Card className={`flex flex-col gap-4 p-7 transition-colors ${CONTENEDOR_POR_ESTADO[estado] ?? ''}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold text-slate-100">{nombre}</h3>
-          <p className="mt-1 text-xs text-slate-400">{descripcion}</p>
+          <h3 className="text-lg font-semibold text-slate-100">{nombre}</h3>
+          <p className="mt-1 text-sm text-slate-400">{descripcion}</p>
         </div>
         <Badge variante={variante}>{etiqueta}</Badge>
       </div>
 
-      <div className="flex flex-col gap-1 border-t border-borde pt-3 text-sm text-slate-300">
+      <div className="flex flex-col gap-2 border-t border-borde pt-4 text-base text-slate-300">
         <span>
-          Valor actual: <span className="font-medium text-slate-100">{valorActual}</span>
+          Valor actual: <span className="font-semibold text-slate-100">{valorActual}</span>
         </span>
         {tiempoActivo && (
-          <span className="text-xs text-slate-400">Tiempo disparada: {tiempoActivo} (observado)</span>
+          <span className="text-sm text-slate-400">Tiempo disparada: {tiempoActivo} (observado)</span>
         )}
       </div>
     </Card>

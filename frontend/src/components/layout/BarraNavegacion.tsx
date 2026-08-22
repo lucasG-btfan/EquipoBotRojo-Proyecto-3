@@ -48,7 +48,7 @@ export function BarraNavegacion() {
             <button
               type="button"
               onClick={manejarCerrarSesion}
-              className="flex items-center gap-2 whitespace-nowrap rounded-md px-3 py-2 text-sm text-slate-300 transition-colors hover:bg-peligro/15 hover:text-peligro"
+              className="flex items-center gap-2 whitespace-nowrap rounded-md border border-peligro/30 bg-peligro/10 px-3 py-2 text-sm font-medium text-peligro transition-colors hover:bg-peligro/20"
             >
               <LogOut size={16} />
               Cerrar sesión

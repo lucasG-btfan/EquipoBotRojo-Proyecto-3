@@ -11,6 +11,7 @@ export default {
         borde: '#334155',
         primario: '#3b82f6',
         peligro: '#ef4444',
+        naranja: '#f97316',
         advertencia: '#f59e0b',
         exito: '#22c55e',
       },

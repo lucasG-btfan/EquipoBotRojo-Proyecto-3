@@ -38,7 +38,8 @@ interface AlertasPrometheusRespuesta {
 /* ------------------------------------------------------------------ */
 
 function formatearTiempo(segundos: number | null): string {
-  if (segundos === null || segundos === undefined || segundos === 0) return '—'
+  if (segundos === null || segundos === undefined) return '—'
+  if (segundos < 1) return `${Math.round(segundos * 1000)}ms`
   if (segundos < 60) return `${segundos.toFixed(1)}s`
   const minutos = Math.floor(segundos / 60)
   const segs = Math.round(segundos % 60)
@@ -152,7 +153,7 @@ export function DashboardPage() {
     async () => {
       const respuesta = await apiClient.get<RespuestaPaginada<Alerta>>(
         '/api/alerts/recent',
-        { params: { limit: 5, offset: 0 } },
+        { params: { limit: 20, offset: 0 } },
       )
       return respuesta.data
     },
@@ -209,7 +210,7 @@ export function DashboardPage() {
           variante={fail2banActivo ? 'exito' : 'peligro'}
         />
         <KpiCard
-          titulo="Último TPW"
+          titulo="Último TPW (análisis)"
           valor={cargandoTpw ? '…' : formatearTiempo(ultimoTpw)}
           icono={<Timer className="h-6 w-6" />}
         />
@@ -259,33 +260,41 @@ export function DashboardPage() {
           </div>
         ) : alertas.length > 0 ? (
           <Card className="overflow-x-auto p-0">
-            <table className="w-full text-left text-sm">
+            <table className="w-full text-left text-base">
               <thead>
-                <tr className="border-b border-borde text-xs text-slate-400">
-                  <th className="px-4 py-3">Fecha</th>
-                  <th className="px-4 py-3">Severidad</th>
-                  <th className="px-4 py-3">Categoría</th>
-                  <th className="px-4 py-3">IP origen</th>
-                  <th className="px-4 py-3">Nivel de riesgo</th>
+                <tr className="border-b border-borde text-sm text-slate-400">
+                  <th className="px-4 py-3.5">Fecha</th>
+                  <th className="px-4 py-3.5">Severidad</th>
+                  <th className="px-4 py-3.5">Categoría</th>
+                  <th className="px-4 py-3.5">IP origen</th>
+                  <th className="px-4 py-3.5">Nivel de riesgo</th>
+                  <th className="px-4 py-3.5">Reputación</th>
+                  <th className="px-4 py-3.5">Descripción</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-borde">
                 {alertas.map((a) => (
-                  <tr key={a.id} className="text-slate-300 hover:bg-borde/20">
-                    <td className="whitespace-nowrap px-4 py-2.5">
+                  <tr key={a.id} className="text-slate-200 hover:bg-borde/20">
+                    <td className="whitespace-nowrap px-4 py-3">
                       {formatearTimestamp(a.timestamp)}
                     </td>
-                    <td className="px-4 py-2.5">
+                    <td className="px-4 py-3">
                       <Badge variante={varianteSeveridad(a.severity)}>{a.severity}</Badge>
                     </td>
-                    <td className="px-4 py-2.5">{a.category}</td>
-                    <td className="whitespace-nowrap px-4 py-2.5 font-mono text-xs">
+                    <td className="px-4 py-3">{a.category}</td>
+                    <td className="whitespace-nowrap px-4 py-3 font-mono text-sm">
                       {a.source_ip ?? '—'}
                     </td>
-                    <td className="px-4 py-2.5">
+                    <td className="px-4 py-3">
                       <Badge variante={varianteRiskLevel(a.risk_level)}>
                         {a.risk_level ?? '—'}
                       </Badge>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm">
+                      {a.threat_reputation ?? '—'}
+                    </td>
+                    <td className="max-w-xs truncate px-4 py-3 text-sm" title={a.description ?? undefined}>
+                      {a.description ?? '—'}
                     </td>
                   </tr>
                 ))}
@@ -299,63 +308,34 @@ export function DashboardPage() {
 
       {/* ——— Métricas TPW ——— */}
       <section>
-        <h2 className="mb-4 text-lg font-semibold text-slate-100">Métricas TPW</h2>
+        <h2 className="mb-4 text-lg font-semibold text-slate-100">
+          Métricas TPW (workflow de análisis)
+        </h2>
         {cargandoTpw && !tpw ? (
           <div className="flex items-center gap-2 text-slate-400">
             <Spinner tamano={16} />
             <span className="text-sm">Cargando métricas TPW…</span>
           </div>
         ) : tpw ? (
-          <div className="flex flex-col gap-4">
-            {/* Resumen */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Card className="flex items-center gap-4">
-                <Activity className="h-8 w-8 text-primario" />
-                <div>
-                  <p className="text-xs text-slate-400">Último tiempo</p>
-                  <p className="text-lg font-bold text-slate-100">
-                    {formatearTiempo(tpw.valor_actual)}
-                  </p>
-                </div>
-              </Card>
-              <Card className="flex items-center gap-4">
-                <Activity className="h-8 w-8 text-primario" />
-                <div>
-                  <p className="text-xs text-slate-400">Promedio</p>
-                  <p className="text-lg font-bold text-slate-100">
-                    {formatearTiempo(tpw.promedio)}
-                  </p>
-                </div>
-              </Card>
-            </div>
-
-            {/* Historial */}
-            {(tpw.historial?.length ?? 0) > 0 && (
-              <Card titulo="Historial de ejecuciones">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
-                    <thead>
-                      <tr className="border-b border-borde text-xs text-slate-400">
-                        <th className="px-4 py-2">#</th>
-                        <th className="px-4 py-2">Duración</th>
-                        <th className="px-4 py-2">Estado</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-borde">
-                      {tpw.historial?.map((duracion, indice) => (
-                        <tr key={indice} className="text-slate-300">
-                          <td className="px-4 py-2 font-mono text-xs">{indice + 1}</td>
-                          <td className="px-4 py-2">{formatearTiempo(duracion)}</td>
-                          <td className="px-4 py-2">
-                            <Badge variante="exito">Completado</Badge>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </Card>
-            )}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Card className="flex items-center gap-4">
+              <Activity className="h-8 w-8 text-primario" />
+              <div>
+                <p className="text-xs text-slate-400">Último tiempo</p>
+                <p className="text-lg font-bold text-slate-100">
+                  {formatearTiempo(tpw.valor_actual)}
+                </p>
+              </div>
+            </Card>
+            <Card className="flex items-center gap-4">
+              <Activity className="h-8 w-8 text-primario" />
+              <div>
+                <p className="text-xs text-slate-400">Promedio</p>
+                <p className="text-lg font-bold text-slate-100">
+                  {formatearTiempo(tpw.promedio)}
+                </p>
+              </div>
+            </Card>
           </div>
         ) : (
           <p className="text-sm text-slate-400">No hay métricas TPW disponibles.</p>

@@ -19,6 +19,7 @@ export async function obtenerIpsBloqueadas(params: {
   limit: number
   offset: number
   activo?: boolean
+  motivo?: string
 }): Promise<RespuestaPaginada<IPBloqueada>> {
   const respuesta = await apiClient.get<RespuestaPaginada<IPBloqueada>>('/api/ips/blocked', {
     params,
@@ -47,6 +48,8 @@ export async function obtenerPatronesAtaque(params: {
 export async function obtenerMetricasSistema(params: {
   limit: number
   offset: number
+  desde?: string
+  hasta?: string
 }): Promise<RespuestaPaginada<MetricaSistema>> {
   const respuesta = await apiClient.get<RespuestaPaginada<MetricaSistema>>(
     '/api/metrics/system',

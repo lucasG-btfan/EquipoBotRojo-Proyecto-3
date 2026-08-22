@@ -29,7 +29,7 @@ export function EnlacesExternos() {
             rel="noopener noreferrer"
             className="group flex items-center justify-between gap-3 rounded-lg border border-borde bg-fondo px-5 py-4 text-slate-200 transition-colors hover:border-primario/60 hover:bg-primario/10"
           >
-            <span className="text-sm font-medium">{etiqueta}</span>
+            <span className="text-base font-medium">{etiqueta}</span>
             <ExternalLink
               size={18}
               className="shrink-0 text-slate-400 transition-colors group-hover:text-primario"

@@ -44,50 +44,49 @@ export function EstadoJail() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
       {/* Card resumen */}
-      <Card>
+      <Card className="p-8 lg:col-span-2">
         <div className="flex items-center justify-between max-lg:flex-wrap max-lg:gap-2">
-          <div>
-            <h3 className="text-sm font-semibold text-slate-100">
-              Jail: <span className="font-mono text-primario">{datos?.jail ?? '—'}</span>
-            </h3>
-            <p className="mt-1 text-xs text-slate-400">
-              Última actualización: {new Date().toLocaleString('es-AR')}
-            </p>
-          </div>
+          <h3 className="text-lg font-semibold text-slate-100">
+            Jail: <span className="font-mono text-primario">{datos?.jail ?? '—'}</span>
+          </h3>
           <button
             type="button"
             onClick={() => void refrescar()}
             disabled={cargando}
-            className="flex items-center gap-2 rounded-md border border-borde px-3 py-1.5 text-sm text-slate-200 transition-colors hover:bg-borde/30 disabled:cursor-not-allowed disabled:opacity-50 max-lg:py-2"
+            className="flex items-center gap-2 rounded-lg border border-borde px-5 py-2.5 text-base font-medium text-slate-200 transition-colors hover:bg-borde/30 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <RefreshCw size={14} className={cargando ? 'animate-spin' : ''} />
+            <RefreshCw size={18} className={cargando ? 'animate-spin' : ''} />
             Actualizar
           </button>
         </div>
+        <p className="mt-2 text-sm text-slate-400">
+          Última actualización: {new Date().toLocaleString('es-AR')}
+        </p>
 
-        <div className="mt-4 flex items-baseline gap-3">
-          <span className="text-4xl font-bold text-peligro max-lg:text-3xl">
+        <div className="mt-8 flex items-baseline gap-4">
+          <span className="text-7xl font-bold text-peligro max-lg:text-5xl">
             {datos?.baneadas ?? 0}
           </span>
-          <span className="text-sm text-slate-300">
+          <span className="text-lg text-slate-300">
             IP{(datos?.baneadas ?? 0) !== 1 ? 's' : ''} baneada{((datos?.baneadas ?? 0) !== 1 ? 's' : '')}
           </span>
         </div>
       </Card>
 
       {/* Lista de IPs baneadas */}
-      <Card titulo="IPs baneadas">
+      <Card className="p-8 lg:col-span-3">
+        <h3 className="mb-5 text-lg font-semibold text-slate-100">IPs baneadas</h3>
         {!datos || datos.ips.length === 0 ? (
-          <p className="text-sm text-slate-400">No hay IPs baneadas actualmente.</p>
+          <p className="text-base text-slate-400">No hay IPs baneadas actualmente.</p>
         ) : (
-          <ul className="flex flex-wrap gap-2">
+          <ul className="flex flex-wrap gap-3">
             {datos.ips.map((ip) => (
               <li key={ip}>
-                <Badge variante="peligro">
-                  <span className="font-mono">{ip}</span>
-                </Badge>
+                <span className="inline-flex items-center rounded-full bg-peligro/15 px-4 py-2 font-mono text-base text-peligro">
+                  {ip}
+                </span>
               </li>
             ))}
           </ul>

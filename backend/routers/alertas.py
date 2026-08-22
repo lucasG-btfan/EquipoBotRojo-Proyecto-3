@@ -45,7 +45,7 @@ async def obtener_alertas_recientes(
             result = await session.execute(query)
             alertas = result.scalars().all()
 
-            # Mapear a dict con solo los campos requeridos (11 campos)
+            # Mapear a dict con solo los campos requeridos (12 campos)
             items = []
             for alerta in alertas:
                 items.append(
@@ -61,6 +61,7 @@ async def obtener_alertas_recientes(
                         "description": alerta.description,
                         "risk_score": alerta.risk_score,
                         "risk_level": alerta.risk_level,
+                        "threat_reputation": alerta.threat_reputation,
                     }
                 )
 

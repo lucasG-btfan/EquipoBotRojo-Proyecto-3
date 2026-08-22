@@ -1,4 +1,4 @@
-export type VarianteBadge = 'exito' | 'advertencia' | 'peligro' | 'info' | 'neutro'
+export type VarianteBadge = 'exito' | 'advertencia' | 'peligro' | 'naranja' | 'info' | 'neutro'
 
 interface BadgeProps {
   variante: VarianteBadge
@@ -11,6 +11,7 @@ const CLASES_POR_VARIANTE: Record<VarianteBadge, string> = {
   exito: 'bg-exito/15 text-exito',
   advertencia: 'bg-advertencia/15 text-advertencia',
   peligro: 'bg-peligro/15 text-peligro',
+  naranja: 'bg-naranja/15 text-naranja',
   info: 'bg-primario/15 text-primario',
   neutro: 'bg-borde/40 text-slate-300',
 }

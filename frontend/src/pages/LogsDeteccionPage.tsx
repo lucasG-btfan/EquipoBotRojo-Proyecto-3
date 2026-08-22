@@ -27,7 +27,7 @@ export function LogsDeteccionPage() {
       {/* Historial de workflows — ancho completo, uno por workflow */}
       <section>
         <HistorialWorkflows
-          titulo="Historial de workflows"
+          titulo="Historial del workflow principal de análisis"
           endpoint="/api/workflows/runs"
           mostrarItemsProcesados
         />
