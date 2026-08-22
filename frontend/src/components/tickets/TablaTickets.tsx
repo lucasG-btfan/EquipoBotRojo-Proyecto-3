@@ -4,7 +4,7 @@ import type { ColumnaTabla } from '../common/Tabla'
 import { Badge } from '../common/Badge'
 import type { VarianteBadge } from '../common/Badge'
 import { DetalleTicket } from './DetalleTicket'
-import { obtenerTickets, FILAS_POR_PAGINA } from '../../services/ticketsService'
+import { obtenerTickets, resolverTicket, FILAS_POR_PAGINA } from '../../services/ticketsService'
 import type { RespuestaPaginada } from '../../types/comun'
 import { ESTADOS_TICKET_CONOCIDOS, PRIORIDADES_TICKET_CONOCIDAS } from '../../types/tickets'
 import type { FiltroEstadoTicket, FiltroPrioridadTicket, Ticket } from '../../types/tickets'
@@ -61,6 +61,10 @@ export function TablaTickets() {
   const [filtroPrioridad, setFiltroPrioridad] = useState<FiltroPrioridadTicket>('todas')
   const [ticketExpandido, setTicketExpandido] = useState<number | null>(null)
 
+  const [ticketEnConfirmacion, setTicketEnConfirmacion] = useState<number | null>(null)
+  const [ticketResolviendo, setTicketResolviendo] = useState<number | null>(null)
+  const [errorResolver, setErrorResolver] = useState<string | null>(null)
+
   const consultar = async () => {
     setCargando(true)
     try {
@@ -98,6 +102,32 @@ export function TablaTickets() {
 
   const alternarDetalle = (id: number) => {
     setTicketExpandido((actual) => (actual === id ? null : id))
+    setTicketEnConfirmacion(null)
+    setErrorResolver(null)
+  }
+
+  const iniciarResolver = (id: number) => {
+    setErrorResolver(null)
+    setTicketEnConfirmacion(id)
+  }
+
+  const cancelarResolver = () => {
+    setTicketEnConfirmacion(null)
+  }
+
+  const confirmarResolver = async (id: number) => {
+    setErrorResolver(null)
+    setTicketEnConfirmacion(null)
+    setTicketResolviendo(id)
+
+    try {
+      await resolverTicket(id)
+      await consultar()
+    } catch (err) {
+      setErrorResolver(err instanceof Error ? err.message : 'Error al cerrar el ticket')
+    } finally {
+      setTicketResolviendo(null)
+    }
   }
 
   const columnas: ColumnaTabla<Ticket>[] = [
@@ -233,7 +263,15 @@ export function TablaTickets() {
 
       {ticketSeleccionado && (
         <div className="mb-4">
-          <DetalleTicket ticket={ticketSeleccionado} />
+          <DetalleTicket
+            ticket={ticketSeleccionado}
+            enConfirmacion={ticketEnConfirmacion === ticketSeleccionado.id}
+            resolviendo={ticketResolviendo === ticketSeleccionado.id}
+            errorResolver={errorResolver}
+            onIniciarResolver={() => iniciarResolver(ticketSeleccionado.id)}
+            onConfirmarResolver={() => void confirmarResolver(ticketSeleccionado.id)}
+            onCancelarResolver={cancelarResolver}
+          />
         </div>
       )}
 

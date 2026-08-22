@@ -27,3 +27,9 @@ export async function obtenerTickets(params: {
   })
   return respuesta.data
 }
+
+/** Cierre manual de un ticket (`POST /api/tickets/{id}/resolve`): marca `status = 'resolved'`. */
+export async function resolverTicket(id: number): Promise<{ mensaje: string }> {
+  const respuesta = await apiClient.post<{ mensaje: string }>(`/api/tickets/${id}/resolve`)
+  return respuesta.data
+}

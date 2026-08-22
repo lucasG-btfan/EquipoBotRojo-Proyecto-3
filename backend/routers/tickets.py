@@ -1,7 +1,7 @@
 """Router de tickets de seguridad."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 
 from backend.database import async_session_factory
 from backend.dependencies import usuario_actual
@@ -67,4 +67,47 @@ async def obtener_tickets(
         raise HTTPException(
             status_code=500,
             detail=f"Error al obtener tickets: {str(e)}",
+        )
+
+
+@router.post("/{ticket_id}/resolve")
+async def resolver_ticket(ticket_id: int, usuario: dict = Depends(usuario_actual)):
+    """Marca un ticket como resuelto manualmente.
+
+    Cierre manual para eventos que el workflow de n8n crea con `status='open'`
+    y nunca resuelve automáticamente (ej. `sudo_usage`, `kernel_oops`,
+    `service_restart`): a diferencia del desbloqueo de IPs, acá no hay ningún
+    sistema externo que actualizar, por lo que el propio backend escribe
+    `security_tickets.status` directamente.
+    """
+    try:
+        async with async_session_factory() as session:
+            ticket = await session.get(Ticket, ticket_id)
+
+            if ticket is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"No existe un ticket con id {ticket_id}",
+                )
+
+            if ticket.status == "resolved":
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"El ticket {ticket.ticket_number} ya está resuelto",
+                )
+
+            await session.execute(
+                update(Ticket)
+                .where(Ticket.id == ticket_id)
+                .values(status="resolved", updated_at=func.current_timestamp())
+            )
+            await session.commit()
+
+            return {"mensaje": f"Ticket {ticket.ticket_number} marcado como resuelto"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al resolver ticket {ticket_id}: {str(e)}",
         )
