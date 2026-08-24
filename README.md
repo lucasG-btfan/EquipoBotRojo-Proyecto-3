@@ -1,419 +1,544 @@
-# EJERCICIO 1:
-
-## Comandos para creacion de clientes y visualización de logs
-
-## Creacion de clientes (asociados a la red equipobotrojoproyecto3_default )
-docker run --rm -it --network equipobotrojoproyecto3_default --name client1 alpine sh
-
-docker run --rm -it --network equipobotrojoproyecto3_default --name client2 alpine sh
-
-docker run --rm -it --network equipobotrojoproyecto3_default --name client3 alpine sh
-
-## Creacion de logs en cada cliente 
-
-PS C:\Users\rafan\OneDrive\Documentos\EquipoBotRojo.Proyecto3> docker exec client1 sh -c "echo '<4>Failed password for invalid user admin from 192.168.1.10 port 55874 ssh2' | nc -u -w1 syslog-ng 1514"
-
-PS C:\Users\rafan\OneDrive\Documentos\EquipoBotRojo.Proyecto3> docker exec client2 sh -c "echo '<3>sshd[123]: Started OpenSSH Daemon successfully' | nc -u -w1 syslog-ng 1514"
-
-PS C:\Users\rafan\OneDrive\Documentos\EquipoBotRojo.Proyecto3> docker exec client3 sh -c "echo '<4>kernel: [UFW BLOCK] IN=eth0 OUT= MAC= SRC=10.0.0.2 DST=10.0.0.3 LEN=60 TOS=0x00 PREC=0x00 TTL=64 ID=12345 DF PROTO=TCP SPT=443 DPT=22 WINDOW=29200 RES=0x00 SYN URGP=0' | nc -u -w1 syslog-ng 1514"
-
-## Visualizacion centralizada de logs
-
-PS C:\Users\rafan\OneDrive\Documentos\EquipoBotRojo.Proyecto3> docker exec -it syslog-ng cat /var/log/centralized/all.log
-
-### Aclaracion
-El contenido de esta version esta diseñado para cumplir con las consignas del ejercicio 1 y 2 del github: 
-Ejercicio 1:
-- Syslog-ng configurado como servidor central
-- Tres clientes simulados enviando logs
-- Verificacion de recepcion centralizada
-Ejercicio 2:
-- Crear 5 reglas personalizadas de deteccion
-- Workflow de n8n
-- Alerta de prueba
-
-PS C:\Users\rafan\OneDrive\Documentos\EquipoBotRojo.Proyecto3> docker exec -it syslog-ng cat /var/log/security/alerts.log
-cat: /var/log/security/alerts.log: No such file or directory
-
-PS C:\Users\rafan\OneDrive\Documentos\EquipoBotRojo.Proyecto3> docker exec -it syslog-ng cat /var/log/security/failed_ssh.log
-
-Estos comandos no funcionan todavia debido a una configuracion presente en syslog: 
-
-filter f_ssh_failed {
-    facility(auth, authpriv) and
-    match("Failed password" value("MESSAGE"));
-};
-
-Esta parte: facility(auth, authpriv); dificulta la creacion de logs manuales, pero el sistema funciona correctamente.
-
-# EJERCICIO 2:
-
-El paso de instalacion de Elasticsearch (paso 3) se realiza mediante Docker Compose en lugar de instalacion directa sobre el sistema operativo, cumpliendo la misma funcionalidad de forma portable y reproducible.
-
-Para el paso 4, se usa el comando Invoke-WebRequest -UseBasicParsing http://localhost:9200/_cat/indices?v para comprobar que la conexion entre elasticsearch y logstash funcione.
-
-Para el paso 5, se creo una carpeta llamada db donde esta el archivo schema.sql, donde esta la creacion de tablas e indices (la creacion de la base de datos esta comentada porque Docker ya se encarga de eso, por lo que daria error) 
-
-## Flujos de n8n
-Descripcion de cada nodo:
-1. Schedule Trigger: "Despierta" cada 5 minutos para iniciar el análisis
-2. Simulate Logs: Fabrica eventos de seguridad como si vinieran de syslog
-3. Parse Logs: Extrae IPs, usuarios, tipos de ataque de texto crudo
-4. Apply Rules: Pregunta a PostgreSQL: "¿Estos eventos violan alguna regla?"
-5. Check Severity: Decide: ¿Es alerta real (high/medium) o solo info?
-6. Store Alerts (rama YES): Guarda en DB para historial e investigación
-7. Send Notifications: Prepara avisos (en consola, listos para email/Slack)
-8. Log Only (rama NO): Registra que no pasó nada importante
-9. Update Patterns: Cierra el ciclo, actualiza estadísticas
-
-# Sistema de Monitoreo de Seguridad - Resultados
-
-### Resultados de la Prueba 
-
-SELECT
-    '✅ WORKFLOW FUNCIONAL' as estado,
-    COUNT(*) as total_alertas,
-    COUNT(CASE WHEN severity = 'high' THEN 1 END) as alertas_high,
-    COUNT(CASE WHEN severity = 'medium' THEN 1 END) as alertas_medium,
-    COUNT(CASE WHEN severity = 'low' THEN 1 END) as alertas_low,
-    MAX(timestamp) as ultima_alerta,
-    'PostgreSQL + n8n + syslog-ng' as componentes
-FROM alerts;
-
-Resultado:
-
-WORKFLOW FUNCIONAL | 4 alertas total | 2 HIGH | 1 MEDIUM | 1 LOW
-
-Arquitectura Implementada:
-
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│  syslog-ng  │───▶│    n8n      │───▶│ PostgreSQL  │───▶│ Elasticsearch│
-│  (Puerto 514)│    │(Workflows)  │    │   (BD)      │    │  (Opcional)  │
-└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
-        │                  │                   │                  │
-        ▼                  ▼                   ▼                  ▼
-   Logs del sistema   Procesamiento       Almacenamiento      Búsqueda/Análisis
-
-Consulta a postgre para ver las alertas generadas:
-
-SELECT id, severity, rule_id, source_ip, status, LEFT(description, 50) 
-FROM alerts ORDER BY id DESC LIMIT 10;
-
-### Ver alertas en PostgreSQL
-docker exec security-postgres psql -U db_user -d security_monitoring -c "SELECT * FROM alerts;"
-
-### Ver reglas de detección
-docker exec security-postgres psql -U db_user -d security_monitoring -c "SELECT * FROM detection_rules;"
-
-Con este paso hemos logrado:
- - Comunicación entre contenedores
- - Workflow n8n ejecutándose automáticamente
- - Alertas clasificadas por severidad (High/Medium/Low)
- - Datos persistentes en PostgreSQL
- - Reglas de detección personalizadas configuradas
- - Notificaciones preparadas (email/Slack)
-
-
-# EJERCICIO 3
-
-Para cumplir la consigna 1 hay que tener varias consideraciones en cuenta:
-Primero, en N8N se modificó levemente el nodo 4, el encargado de pasar los datos procesados correctamente para su posterior envío. Además, se creó un nodo HTTP Request (Post) para enviar los datos a Logstash (http://logstash:8080).
-Por otro lado, se deben enviar los datos desde Logstash hacia ElasticSearch, para su posterior visualizacion (Grafana/Kibana). Presentamos algunos problemas puntuales:
-- A diferencia de una empresa, al estar trabajando desde una sola computadora, tuvimos que colocar un comando para que ElasticSearch no generara replicas. Esto ocurre debido a que  busca crear copias de los datos enviados en otro lugar, pero al tener una sola computadora, no es posible. 
-
-Solucion: $template = '{"index_patterns": ["security-logs-*"], "template": {"settings": {"number_of_replicas": 0}}}'; Invoke-RestMethod -Method Put -Uri "http://localhost:9200/_index_template/logs_template" -ContentType "application/json" -Body $template
-
-- Al tener poco espacio de almacenamiento, ElasticSearch bloquea la entrada y niega el traspaso de datos.
-
-Solucion: $settings = '{"transient": {"cluster.routing.allocation.disk.threshold_enabled": false}}'; Invoke-RestMethod -Method Put -Uri "http://localhost:9200/_cluster/settings" -ContentType "application/json" -Body $settings
-Estas 2 causas hacian que al hacer el get a localhost 9200, el sistema de el estado "red", que quiere decir que no es funcional. Al solucionar estos problemas, el estado paso a "green".
-
-Como se llevan los datos a elastic: Activamos el workflow de N8N. Para ver si resulto, escribimos este comando en la terminal: Invoke-RestMethod -Method Get -Uri "http://localhost:9200/_cat/indices?v". Este comando invoca un metodo especial, le decimos que es de tipo get, y especificamos la URL a la cual queremos consultar.
-
-# Security Monitoring System - ELK + n8n
-
-## Sistema de Monitoreo de Seguridad
-
-### Componentes
-- **Elasticsearch**: Almacenamiento y búsqueda (puerto 9200)
-- **Kibana**: Visualización y dashboards (puerto 5601)
-- **Logstash**: Procesamiento de logs (puertos 8080, 8081)
-- **n8n**: Automatización y generación de alertas (puerto 5678)
-- **PostgreSQL**: Base de datos para n8n (puerto 5432)
-
-### Flujo de Datos
-1. n8n workflow genera alertas de seguridad
-2. HTTP POST → Logstash:8081 (endpoint: /n8n-alerts)
-3. Logstash procesa y envía a Elasticsearch
-4. Índice: `n8n-alerts-YYYY.MM.dd`
-5. Data View en Kibana: `n8n-alerts`
-6. Dashboard de monitoreo
-
-### Estructura de Alertas
-{
-  "timestamp": "2024-01-19T12:30:00Z",
-  "source_ip": "192.168.1.100",
-  "severity": "high",
-  "rule_name": "Failed Login Attempts",
-  "source": "n8n",
-  "threat_score": 75,
-  "message": "Multiple failed login attempts detected"
-}
-
-# EJERCICIO 4: Respuesta Automática y Notificaciones Multi-canal
-
-Descripción:El ejercicio 4 implementa un sistema completo de respuesta automática a incidentes de seguridad. Cuando se detecta una amenaza, el sistema no solo genera alertas, sino que toma acciones inmediatas: bloquea IPs maliciosas, crea tickets automáticos y notifica a los equipos especializados por múltiples canales (email, Slack, base de datos).
-
-## Componentes Clave
-
-Auto-bloqueo de IPs:
-
-Webhook: Recibe alertas en tiempo real.
-Lógica: Bloquea IPs si threat_score ≥ 80 (30 días) o ≥ 60 (24 horas).
-Base de datos: Registra IPs bloqueadas en la tabla blocked_ips.
-
-## Sistema de Tickets:
-
-Asignación: Dirige tickets a equipos según el tipo de amenaza (ej: SSH → SOC Team).
-Notificaciones: Envía alertas por email y Slack.
-
-## Integración con ELK:
-
-Registra acciones en Logstash para auditoría y visualización en Kibana.
-
-## Pruebas y Comandos
-
-Auto-bloqueo:
-bash
-Copiar
-
-curl -X POST http://localhost:5678/webhook/auto-block -H "Content-Type: application/json" -d '{"source_ip": "192.168.1.100", "threat_score": 85, "severity": "high"}'
-
-Tickets:
-bash
-Copiar
-
-curl -X POST http://localhost:5678/webhook/create-ticket -H "Content-Type: application/json" -d '{"source_ip": "10.0.0.50", "risk_score": 75, "title": "SQL Injection"}'
-
-Verificación en PostgreSQL:
-bash
-Copiar
-
-docker exec security-postgres psql -U db_user -d security_monitoring -c "SELECT * FROM blocked_ips;"
-docker exec security-postgres psql -U db_user -d security_monitoring -c "SELECT * FROM security_tickets;"
-
-## Resultados Esperados
-
-Tiempo de respuesta: < 5 segundos.
-Canales de notificación: Email, Slack, PostgreSQL.
-Impacto: Automatiza el 80% de tareas repetitivas y mejora la trazabilidad.
-
-
-## Herramientas de analisis
-Esto es lo ultimo que hemos hecho hasta el momento. Hemos implementado las herramientas Prometheus/Alertmanager y Fail2ban. Estas nos permiten que nuestro sistema sea mas profesional y seguro, registrando y manejando eficientemente las alertas y bloqueando instantaneamente a aquellas IPs catalogadas como maliciosas.
--Fail2ban: En su carpeta correspondiente, hemos configurado el jail, donde le especificamos que al momento de banear ignore nuestra IP (ya que somos nosotros mismos, y en caso de pruebas podria banearnos), y el archivo que debera leer en busca de instrucciones de baneo. Esto funciona ya que en el nodo 4 (auto bloqueo de IPs) hemos colocado un nodo que escribe en el archivo en cuestion, por lo que cuando se activa, el archivo es modificado y fail2ban detecta ese cambio, ejecutando el baneo.
--Fail2ban-exporter: Actua como puente entre Fail2ban y Prometheus.
--Alertmanager/Prometheus: Este conjunto de herramientas nos sirve para garantizar la disponibilidad y el monitoreo de métricas de nuestra infraestructura y vigilar que el sistema no se sature ni falle. Prometheus se conecta a Fail2ban-exporter para extraer datos sobre cuántas IPs están siendo bloqueadas en tiempo real y cuántos intentos fallidos se detectan. Alertmanager tambien envia una notificacion a Slack, corroborando que el baneo fue efectivo.
-
-# Fuentes de informacion
- - El curso de videos del profesor Ariel Enferrel acerca de Docker.
- - GitHub proporcionado por los profesores. Esto fue de vital importancia para las partes de Syslog-ng (archivo .conf), Logstash y la creacion de la base de datos de PostgreSQL, ademas de los nodos de N8N.
- - Consultas a IA sobre solucion de problemas puntuales, por ejemplo, personalizaciones o cambios pequeños en el syslog.conf, para que pueda funcionar.
- - https://aprendiendoarduino.wordpress.com/tag/flujos-node-red/
- - Videos de N8N: 
-   https://www.youtube.com/watch?v=3IvcIPDGB1k
-   https://www.youtube.com/watch?v=llzEpKUxl9E&list=PLMd59HZRUmEjuFxu8hsAvErZkn0_W-A6b (Proporcionado por los profesores)
- -Fail2ban: https://youtu.be/kgdoVeyoO2E?si=0zoXm4h6aHaLLAeP
--Alertmanager/Prometheus: 
-  https://www.youtube.com/watch?v=93aafqTJRwQ
-  https://youtu.be/2fDFLc7Yovc?si=Qy9TXjG11UF3pFMD
-  https://youtu.be/QKkrsY-sndg?si=QQER5zQkAEV1JzK6
--Trabajar con Slack:
- https://www.youtube.com/watch?v=md6KZo_-bfw&t=44s
- https://www.youtube.com/watch?v=md6KZo_-bfw&t=44s
-
-## Integración de Wazuh SIEM
-Wazuh es una plataforma open-source de seguridad que actúa como SIEM (Security Information and Event Management). En este ejercicio integramos Wazuh al stack existente para obtener monitoreo en tiempo real de agentes, correlación de eventos y visualización de alertas de seguridad.
-Componentes agregados al stack
-
-Wazuh Manager: Motor central de análisis y correlación (puerto 55000 API, 1516 agentes)
-Wazuh Indexer: Base de datos OpenSearch para almacenamiento de eventos (puerto 9201)
-Wazuh Dashboard: Interfaz web de visualización (puerto 5602)
-
-# Consideraciones importantes antes de levantar el stack
-Archivo wazuh.yml (Dashboard → Manager)
-El archivo wazuh/dashboard/wazuh.yml usa el nombre de servicio Docker en lugar de IP, ya que las IPs son dinámicas y cambian al recrear contenedores:
-yamlhosts:
-  - default:
-      url: http://wazuh-manager
-      port: 55000
-      username: wazuh-wui
-      password: "MyS3cr37P450r"
-      run_as: false
-Este archivo está montado como :ro (read-only). No cambiar a :rw porque el script de inicio del contenedor sobreescribiría el archivo y corrompería el YAML.
-Archivo api.yaml (seguridad de la API)
-El archivo wazuh/manager/etc/api.yaml tiene use_only_authd: no. No revertir a yes porque causa timeout y error 500 en el plugin del dashboard.
-client.keys (registro de agentes)
-El archivo wazuh/manager/etc/client.keys está montado como volumen desde el host para que los agentes registrados persistan aunque se recree el contenedor. Si se borra, hay que volver a registrar los agentes.
-Levantar el stack
-bashdocker compose up -d
-Verificar que los tres componentes estén corriendo:
-bashdocker ps | grep wazuh
-Acceder al dashboard: http://localhost:5602
-
-Usuario: admin
-Contraseña: Admin1234!
-
-# Problema conocido en Windows: localhost no responde
-Si localhost:5602 no responde pero 127.0.0.1:5602 sí, ejecutar en PowerShell como administrador y reiniciar el equipo:
-powershellnetsh winsock reset
-netsh int ip reset
-Registrar un agente Windows
-# Paso 1 — Descargar el instalador
-Descargar wazuh-agent-4.7.2-1.msi desde https://documentation.wazuh.com/current/installation-guide/wazuh-agent/wazuh-agent-package-windows.html
-# Paso 2 — Instalar el agente (PowerShell como administrador)
-powershellmsiexec /i "C:\Users\TU_USUARIO\Downloads\wazuh-agent-4.7.2-1.msi" /q WAZUH_MANAGER="localhost" WAZUH_AGENT_NAME="nombre-equipo"
-# Paso 3 — Configurar el puerto en ossec.conf
-Editar C:\Program Files (x86)\ossec-agent\ossec.conf y verificar que tenga:
-xml<client>
-  <server>
-    <address>localhost</address>
-    <port>1516</port>
-    <protocol>tcp</protocol>
-  </server>
-</client>
-# Paso 4 — Registrar el agente en el manager
-bashdocker exec wazuh-manager bash -c "touch /var/ossec/etc/client.keys && chmod 640 /var/ossec/etc/client.keys && chown root:wazuh /var/ossec/etc/client.keys"
+# EquipoBotRojo Proyecto 3 — Sistema SIEM/SOAR con Panel de Control Web
+
+Sistema integral de detección y respuesta a intrusiones construido íntegramente sobre herramientas
+open source: recolección centralizada de logs, detección de amenazas con workflows automatizados,
+respuesta automática (baneo de IPs, tickets), monitoreo de métricas con alertas, correlación SIEM
+con Wazuh — y un **panel de control web** propio que unifica la operación de todo el sistema.
+
+> 📄 Este documento reemplaza al README anterior y es la referencia única y actualizada del
+> proyecto. Describe el estado actual completo: arquitectura, componentes, cómo levantar cada
+> pieza, el contrato real de la API (verificado contra el código) y notas operativas.
+
+**Stack:** syslog-ng · n8n · PostgreSQL · Fail2ban · Prometheus + Alertmanager · ELK (Elasticsearch,
+Logstash, Kibana) · Wazuh · React + TypeScript · FastAPI · Docker
+
+**Roadmap del panel web:** completo (21/21 changes — ver [§12](#12-estado-del-desarrollo))
+
+---
+
+## Índice
+
+- [EquipoBotRojo Proyecto 3 — Sistema SIEM/SOAR con Panel de Control Web](#equipobotrojo-proyecto-3--sistema-siemsoar-con-panel-de-control-web)
+  - [Índice](#índice)
+  - [1. ¿Qué hace este sistema, en una frase?](#1-qué-hace-este-sistema-en-una-frase)
+  - [2. Arquitectura general](#2-arquitectura-general)
+  - [3. Inicio rápido](#3-inicio-rápido)
+  - [4. Stack de contenedores (14 servicios)](#4-stack-de-contenedores-14-servicios)
+  - [5. Base de datos (PostgreSQL `security_monitoring`)](#5-base-de-datos-postgresql-security_monitoring)
+  - [6. Workflows de n8n (versionados en `data/n8n/`)](#6-workflows-de-n8n-versionados-en-datan8n)
+  - [7. Monitoreo: Prometheus + Alertmanager + fail2ban-exporter](#7-monitoreo-prometheus--alertmanager--fail2ban-exporter)
+  - [8. Wazuh SIEM](#8-wazuh-siem)
+  - [9. Panel de control web](#9-panel-de-control-web)
+    - [9.1 Frontend — React + TypeScript + Tailwind](#91-frontend--react--typescript--tailwind)
+    - [9.2 Backend — FastAPI](#92-backend--fastapi)
+    - [9.3 Contrato de la API (verificado contra `backend/routers/`)](#93-contrato-de-la-api-verificado-contra-backendrouters)
+  - [10. Variables de entorno](#10-variables-de-entorno)
+    - [Backend (`backend/.env`) — leídas por `config.py`](#backend-backendenv--leídas-por-configpy)
+    - [Frontend (`frontend/.env`)](#frontend-frontendenv)
+  - [11. Notas operativas](#11-notas-operativas)
+    - [11.1 Inyector de logs de prueba](#111-inyector-de-logs-de-prueba)
+    - [11.2 Preparar los emisores (antes de cada demo)](#112-preparar-los-emisores-antes-de-cada-demo)
+    - [11.3 Problemas conocidos](#113-problemas-conocidos)
+  - [12. Estado del desarrollo](#12-estado-del-desarrollo)
+  - [13. Estructura del repositorio y convenciones](#13-estructura-del-repositorio-y-convenciones)
+  - [14. Fuentes de información](#14-fuentes-de-información)
+
+---
+
+## 1. ¿Qué hace este sistema, en una frase?
+
+Un log sospechoso entra por `syslog-ng` → un workflow de `n8n` lo analiza y decide si es una
+amenaza → si lo es, `Fail2ban` banea la IP automáticamente y se genera un ticket → `Prometheus`
+vigila que todo el pipeline siga sano y dispara alertas si algo falla → todo el evento, además,
+queda visible en `Kibana` (búsqueda/análisis) y correlacionado en `Wazuh` (SIEM). El **panel de
+control web** es la ventana única desde donde se observa y opera todo esto, sin tocar una terminal.
+
+Si es la primera vez que tocás este repo, andá directo a [§3 — Inicio rápido](#3-inicio-rápido).
+
+---
+
+## 2. Arquitectura general
+
+```
+                        ┌──────────────────────────────────────────────┐
+                        │              PANEL DE CONTROL WEB             │
+                        │  Frontend React+TS (:5173) ── Backend         │
+                        │                    FastAPI (:8000)            │
+                        └──────────────────────┬───────────────────────┘
+                                                │ consulta/opera
+     Emisores de logs                                          ▼
+  (web-server, firewall,      syslog-ng ──▶ n8n (workflows SOAR) ──▶ PostgreSQL
+   db-server: efímeros)       (colector)         │                     │
+                                     │             ├──▶ Fail2ban ◀─── Prometheus ◀── fail2ban-exporter
+                                     │             ├──▶ Logstash ──▶ Elasticsearch ──▶ Kibana
+                                     │             └──▶ Wazuh Manager ◀── agentes Windows/Linux
+                                     ▼
+                          Alertmanager ──webhook──▶ n8n (creación de tickets)
+```
+
+**Flujo principal:** los logs llegan a syslog-ng → n8n los analiza contra reglas de detección →
+genera alertas en PostgreSQL → las amenazas críticas disparan auto-bloqueo vía Fail2ban →
+fail2ban-exporter expone métricas → Prometheus las scrapea y Alertmanager crea tickets por webhook
+de n8n. En paralelo, los eventos se envían a ELK (búsqueda/análisis) y a Wazuh (SIEM/correlación).
+
+El panel web **nunca toca las APIs del stack directamente desde el browser**: todo pasa por el
+backend FastAPI, que actúa como proxy autenticado.
+
+---
+
+## 3. Inicio rápido
+
+Para levantar todo el sistema desde cero, en este orden:
+
+1. **Stack de contenedores:**
+   ```bash
+   docker compose up -d
+   docker ps        # verificar que los 14 servicios estén running
+   ```
+2. **Backend:**
+   ```powershell
+   cd backend
+   python -m venv venv                 # solo la primera vez
+   .\venv\Scripts\activate
+   pip install -r requirements.txt     # solo la primera vez
+   python -m backend                   # o: uvicorn backend.main:app --reload --port 8000
+   ```
+   Docs interactivas de la API: http://localhost:8000/docs
+3. **Frontend:**
+   ```powershell
+   cd frontend
+   npm install        # solo la primera vez (Node 20)
+   npm run dev        # http://localhost:5173
+   ```
+4. **Login** con las credenciales de `DASHBOARD_USER` / `DASHBOARD_PASSWORD` (ver [§10](#10-variables-de-entorno)).
+5. **(Opcional, solo para demos)** preparar los tres emisores de logs sintéticos — ver
+   [§11.2](#112-preparar-los-emisores-antes-de-cada-demo).
+
+> Antes de tocar código, revisá también `AGENTS.md` (convenciones, reglas del proyecto) — es la
+> referencia para cualquier cambio, sea humano o agente el que lo escriba.
+
+---
+
+## 4. Stack de contenedores (14 servicios)
+
+Definidos en `docker-compose.yml` (archivo protegido — no modificar sin coordinar con el equipo):
+
+| Servicio | Imagen | Puerto host | Rol |
+|---|---|---|---|
+| `syslog-ng` | balabit/syslog-ng:4.10.2 | 514/udp, 601/tcp, 1514/tcp+udp | Colector central de logs |
+| `postgres` | postgres:15 | 5432 | BD `security_monitoring` (init desde `./bd/`) |
+| `pgadmin` | dpage/pgadmin4:9.11 | 5050 | Administración de PostgreSQL |
+| `elasticsearch` | 8.13.0 | 9200, 9300 | Almacén y búsqueda de logs |
+| `kibana` | 8.13.0 | 5601 | Visualización ELK |
+| `logstash` | 8.13.0 | 8080, 8081 | Ingesta de logs hacia ES |
+| `fail2ban` | crazymax/fail2ban | host network (NET_ADMIN) | Baneo de IPs |
+| `fail2ban-exporter` | build local (`Dockerfile.exporter`) | 9121 | Métricas de fail2ban → formato Prometheus |
+| `prometheus` | v3.9.1 | 9090 | Scraping y reglas de alertas |
+| `alertmanager` | v0.31.1 | 9093 | Enrutamiento de alertas → webhook n8n |
+| `n8n` | 1.118.2 | 5678 | Automatización SOAR (usa PostgreSQL como BD propia) |
+| `wazuh-indexer` | wazuh 4.7.2 | 9201 | OpenSearch de Wazuh |
+| `wazuh-manager` | wazuh 4.7.2 | 55000, 1516 | Motor de análisis y API de Wazuh |
+| `wazuh-dashboard` | wazuh 4.7.2 | 5602 | UI de Wazuh |
+
+Redes: `security-network` y `wazuh-network` (syslog-ng y n8n están en ambas). Volúmenes nombrados
+para persistencia: `postgres_data`, `n8n_data`, `fail2ban_data`, `fail2ban_db`, `wazuh-*-data`.
+
+Además existen tres **emisores de logs efímeros** (`web-server`, `firewall`, `db-server`) que NO
+están declarados en el compose: se crean a mano antes de cada demostración (ver [§11.2](#112-preparar-los-emisores-antes-de-cada-demo)).
+
+---
+
+## 5. Base de datos (PostgreSQL `security_monitoring`)
+
+Esquema core (`bd/schema.sql`):
+
+| Tabla | Propósito |
+|---|---|
+| `alerts` | Alertas del pipeline: severidad, categoría, IP/host origen-destino, risk_score/risk_level, raw_log, estado de investigación y `threat_intel` JSONB (enriquecimiento) |
+| `attack_patterns` | Patrones recurrentes por IP atacante: tipo, primera/última vez visto, ocurrencias totales y ventana reciente |
+| `system_metrics` | Métricas de sistema por hostname |
+| `detection_rules` | Reglas regex de detección con umbral/ventana temporal — 5 reglas seed: SSH Brute Force, Sudo Abuse, Port Scan, Root Login, SQL Injection |
+
+Extensión SOAR (`bd/schema-extended.sql`):
+
+| Tabla | Propósito |
+|---|---|
+| `blocked_ips` | IPs baneadas: threat_score, motivo, vigencia, flag `is_active` |
+| `security_tickets` | Tickets automáticos: número, prioridad, categoría, IP origen, FK a `alerts(id)` |
+
+---
+
+## 6. Workflows de n8n (versionados en `data/n8n/`)
+
+| Workflow | Nodos | Función |
+|---|---|---|
+| `Workflow_fase _3-final` | 25 | Principal: lee `alerts.log`, parsea, aplica reglas, enriquece con threat intel, guarda alertas, marca IPs para baneo y notifica |
+| `worflow_fas_4_Auto-bloqueo` | 7 | Recibe alertas por webhook y bloquea IPs según threat_score (≥80 → 30 días, ≥60 → 24 h) escribiendo la marca que Fail2ban observa |
+| `Sistema de Tickets Automático` | 16 | Crea tickets en `security_tickets` y notifica (email/Slack) según tipo de amenaza |
+| `Metricas Prometheus` | 6 | Recolecta métricas del sistema hacia `system_metrics` |
+| `subworkflow_wazuh_monitor` | 5 | Envía eventos enriquecidos a la API de Wazuh (JWT) y a Logstash para trazabilidad |
+| `Anotar desbaneo en BD` | 3 | Webhook disparado por Fail2ban al desbanear: actualiza `blocked_ips.is_active = false` |
+
+Los IDs reales de los workflows cambian si se recrean en n8n: el backend los toma de variables de
+entorno (`N8N_WORKFLOW_ID_*`, ver [§10](#10-variables-de-entorno)) — nunca están hardcodeados.
+
+---
+
+## 7. Monitoreo: Prometheus + Alertmanager + fail2ban-exporter
+
+- **Prometheus** scrapea cada 15 s a sí mismo y al exporter. Define 3 alertas críticas:
+  - `IpBaneadaDetectada` — más de 0 IPs baneadas por 10 s
+  - `Fail2banCaido` — exporter caído por 1 m
+  - `AtaqueMasivo` — más de 10 IPs baneadas simultáneas
+- **Alertmanager** tiene un único receptor (`n8n-tickets`) que dispara el webhook
+  `/webhook/create-ticket` de n8n → creación automática de tickets. Repeat intervals afinados:
+  Fail2banCaido 15 m, AtaqueMasivo 1 h, resto 12 h.
+- **fail2ban-exporter** (build local, Python) lee la BD sqlite3 de Fail2ban y expone métricas en
+  texto plano en :9121. **Nunca se consulta directo** — siempre vía API de Prometheus, que ya las
+  tiene scrapeadas.
+- **Fail2ban**: jail única `n8n-soar-jail`, `maxretry=1` (baneo al primer match), `bantime=600s`
+  con incremento exponencial (×2, máx 24 h). El filtro detecta la marca
+  `[ALERTA SEGURIDAD] BLOQUEAR IP:` que n8n escribe en su log — **n8n decide, Fail2ban ejecuta**.
+  El action de desbaneo hace POST al webhook de n8n que anota el desbaneo en la BD.
+
+---
+
+## 8. Wazuh SIEM
+
+Integrado al stack como plataforma SIEM: correlación, agentes y alertas nativas (FIM, integridad,
+etc.) diferenciadas de las alertas del pipeline n8n.
+
+- Agente Windows registrado y activo (ver procedimiento más abajo).
+- El backend consulta el **Indexer OpenSearch (:9201)** para contar alertas nativas
+  (índice `wazuh-alerts-*`) — no la API del manager (:55000), que exige JWT y no expone conteo.
+
+Consideraciones importantes del stack Wazuh:
+
+- `wazuh/dashboard/wazuh.yml` usa el nombre de servicio Docker (no IP, son dinámicas). Montado
+  como `:ro` — cambiarlo a `:rw` corrompe el YAML porque el script de inicio lo sobreescribe.
+- `wazuh/manager/etc/api.yaml` tiene `use_only_authd: no`. No revertir a `yes`: causa timeout y
+  error 500 en el plugin del dashboard.
+- `client.keys` está montado desde el host para persistir agentes registrados entre recreaciones.
+- Problema conocido Windows: si `localhost:5602` no responde pero `127.0.0.1:5602` sí, ejecutar
+  `netsh winsock reset` + `netsh int ip reset` como administrador y reiniciar.
+
+<details>
+<summary><strong>Registro de un agente Windows en Wazuh (procedimiento completo)</strong></summary>
+
+**Paso 1 — Descargar el instalador:** `wazuh-agent-4.7.2-1.msi` desde la
+[documentación oficial de Wazuh](https://documentation.wazuh.com/current/installation-guide/wazuh-agent/wazuh-agent-package-windows.html).
+
+**Paso 2 — Instalar** (PowerShell como administrador):
+```powershell
+msiexec /i "C:\Users\TU_USUARIO\Downloads\wazuh-agent-4.7.2-1.msi" /q WAZUH_MANAGER="localhost" WAZUH_AGENT_NAME="nombre-equipo"
+```
+
+**Paso 3 — Configurar puerto:** editar `C:\Program Files (x86)\ossec-agent\ossec.conf`
+y verificar que el cliente apunte a `localhost`, puerto `1516`, protocolo `tcp`.
+
+**Paso 4 — Registrar el agente en el manager:**
+```bash
+docker exec wazuh-manager bash -c "touch /var/ossec/etc/client.keys && chmod 640 /var/ossec/etc/client.keys && chown root:wazuh /var/ossec/etc/client.keys"
 docker exec -it wazuh-manager /var/ossec/bin/manage_agents -a "any" -n "nombre-equipo"
 docker exec -it wazuh-manager /var/ossec/bin/manage_agents -e 001
-Copiar la clave que aparece e importarla en Windows:
-powershell& "C:\Program Files (x86)\ossec-agent\manage_agents.exe" -i "CLAVE_AQUI"
-# Paso 5 — Crear grupo default y reiniciar
-bashdocker exec wazuh-manager bash -c "mkdir -p /var/ossec/etc/shared/default && chown -R wazuh:wazuh /var/ossec/etc/shared/default && echo '<agent_config></agent_config>' > /var/ossec/etc/shared/default/agent.conf && chown wazuh:wazuh /var/ossec/etc/shared/default/agent.conf"
-docker restart wazuh-manager
-# Paso 6 — Iniciar el servicio del agente
-powershellNET START WazuhSvc
-# Paso 7 — Verificar que el agente está activo
-bashdocker exec wazuh-manager /var/ossec/bin/agent_control -l
-Resultado esperado:
-ID: 000, Name: wazuh-manager (server), IP: 127.0.0.1, Active/Local
-ID: 001, Name: nombre-equipo, IP: any, Active
-Integración con n8n (subworkflow Wazuh)
-El workflow principal workflow_fase-3_FINAL envía alertas enriquecidas al subworkflow subworkflow_wazuh_monitor via webhook en http://localhost:5678/webhook/wazuh-monitor.
-Importar los workflows en n8n
-
-Importar primero subworkflow_wazuh_monitor_v3.json
-Importar después workflow_fase-3_final.json
-En el subworkflow, configurar las credenciales Wazuh API (Basic Auth):
-
-Usuario: wazuh-wui
-Contraseña: MyS3cr37P450r
-
-
-Activar ambos workflows
-
-Flujo de datos con Wazuh
-
-n8n detecta amenaza en logs → enriquece con Threat Intel
-Workflow principal llama al subworkflow via webhook
-Subworkflow obtiene token JWT de la API de Wazuh
-Envía el evento a http://wazuh-manager:55000/events
-Envía también a Logstash para trazabilidad en ELK
-El evento aparece en el dashboard de Wazuh → Security → Events
-
-Verificar que Wazuh recibe eventos
-bashdocker exec wazuh-manager tail -20 /var/ossec/logs/ossec.log
-Verificaciones de estado
-bash# Agentes conectados
-docker exec wazuh-manager /var/ossec/bin/agent_control -l
-
-# Log del plugin dashboard
-docker exec wazuh-dashboard cat /usr/share/wazuh-dashboard/data/wazuh/logs/wazuhapp.log | tail -10
-
-# Log del manager
-docker exec wazuh-manager tail -20 /var/ossec/logs/ossec.log
-Resultados obtenidos
-
-Wazuh Manager, Indexer y Dashboard operativos e integrados al stack
-Agente Windows registrado y activo (ID: 001)
-Plugin dashboard conectado al manager via nombre DNS Docker
-Eventos de seguridad generados por n8n visibles en Wazuh → Security
-Subworkflow n8n enviando alertas a Wazuh via JWT
-
-# Fuentes de información
-
-Documentación oficial Wazuh 4.7: https://documentation.wazuh.com/4.7/
-Wazuh Docker deployment: https://documentation.wazuh.com/4.7/deployment-options/docker/docker-installation.html
-Wazuh API reference: https://documentation.wazuh.com/4.7/user-manual/api/reference.html
-
-# Avances 5/4
-El alerts no funcionaba, ahora recolecta los logs que se envian (al menos por terminal, con la forma mas fiel de simularlos).
-N8N ahora lee el archivo alerts y al terminar todo el trabajo del workflow principal borra su contenido para evitar volver a procesar los mismos logs. Ademas, fue modificado para que sea capaz de procesar 5 logs en una ejecucion, separando cada proceso.
-N8N ahora envia a postgres 2 datos mas que estaban null en la tabla, ahora funciona todo (creo que no falta nada por este lado).
-Use el logstash correcto.
-Cree mi agente en wazuh.
-Hubo problemas con kibana y wazuh: 
- -no puedo ver los datos en wazuh
- -arregle kibana, tengo mi tabla y el indice n8n-alerts* y exporte el ndjson
-Creo que esta todo listo, solo falta arreglar wazuh y asegurarse que tanto eso como kibana funcionen.
-
-# Inyector de logs de prueba (CH07) — preparación de los emisores
-
-El backend expone `POST /api/logs/inject` y `GET /api/logs/inject/categorias` para generar logs
-sintéticos que atraviesan la cadena real de detección (syslog-ng → Wazuh → n8n → PostgreSQL →
-Fail2ban → Prometheus). Estos endpoints **no crean contenedores**: los tres emisores
-(`web-server`, `firewall`, `db-server`) son una precondición que el operador prepara a mano, en
-cada sesión de pruebas, siguiendo el mismo procedimiento documentado en la tesis del proyecto.
-
-## Por qué es manual
-
-Los emisores no están declarados en `docker-compose.yml` (el stack declarado sigue siendo de 14
-contenedores). Son efímeros y se recrean para cada demostración; el backend solo los verifica
-(existencia, estado `running`, red compartida con `syslog-ng`, presencia de `logger`) y nunca los
-crea, arranca ni modifica. Si falta alguno, el endpoint responde `503` con el comando exacto para
-resolverlo.
-
-## Paso 0 — averiguar el nombre real de la red
-
-`docker-compose.yml` declara `security-network`, pero Compose la materializa como
-`<nombre-del-proyecto>_security-network`. Antes de crear los emisores, confirmá el nombre real:
-
-```bash
-docker network ls | grep security-network
 ```
 
-## Paso 1 — crear los tres emisores
+**Paso 5 — Importar la clave en Windows** (la que devuelve el paso anterior):
+```powershell
+& "C:\Program Files (x86)\ossec-agent\manage_agents.exe" -i "CLAVE_AQUI"
+```
 
-Reemplazá `<red>` por el nombre obtenido en el paso 0. Cada emisor se crea con `--hostname` igual
-a su nombre (es lo que queda como `source_host` en la alerta) y en la red del stack:
+**Paso 6 — Crear grupo default y reiniciar el manager:**
+```bash
+docker exec wazuh-manager bash -c "mkdir -p /var/ossec/etc/shared/default && chown -R wazuh:wazuh /var/ossec/etc/shared/default && echo '<agent_config></agent_config>' > /var/ossec/etc/shared/default/agent.conf && chown wazuh:wazuh /var/ossec/etc/shared/default/agent.conf"
+docker restart wazuh-manager
+```
+
+**Paso 7 — Iniciar el servicio:** `NET START WazuhSvc`
+
+**Paso 8 — Verificar que quedó activo:**
+```bash
+docker exec wazuh-manager /var/ossec/bin/agent_control -l
+```
+Resultado esperado: ID `000` (server) e ID `001` (tu equipo), ambos `Active`.
+
+</details>
+
+---
+
+## 9. Panel de control web
+
+### 9.1 Frontend — React + TypeScript + Tailwind
+
+| Ítem | Valor |
+|---|---|
+| Framework | React 19.2 + TypeScript, Vite 8 (puerto fijo **5173**) |
+| Estilos | Tailwind CSS 3.4, paleta oscura SOC (fondo `#0f172a`, superficie `#1e293b`, primario azul `#3b82f6`, peligro rojo `#ef4444`), tipografías Inter + JetBrains Mono |
+| HTTP | axios con interceptor JWT automático |
+| Node | 20.x (`.nvmrc`) · lint con oxlint |
+
+**Rutas:**
+
+| Ruta | Página | Contenido |
+|---|---|---|
+| `/` | Landing | Presentación comercial pública del sistema (hero, capacidades, stack, métricas animadas) |
+| `/login` | Login | Autenticación (emisión de JWT); redirige al panel si ya hay sesión |
+| `/dashboard/inicio` | Inicio | Salud general del sistema (dot verde/rojo según contenedores running) |
+| `/dashboard/panel` | Dashboard | KPIs (contenedores activos, IPs baneadas, estado Fail2ban, TPW), estado de contenedores, últimas 20 alertas, métricas TPW |
+| `/dashboard/logs` | Logs y detección | Visor de `alerts.log`, botones de ejecución de workflows, inyector de logs e historiales de los 4 workflows |
+| `/dashboard/ips` | Gestión de IPs | Tablas paginadas: IPs bloqueadas (desbloqueo/baneo manual), patrones de ataque, métricas de sistema |
+| `/dashboard/tickets` | Tickets | Lista paginada con filtros por estado/prioridad, detalle expandible y cierre manual |
+| `/dashboard/fail2ban` | Fail2ban | Estado de la jail e IPs baneadas actualmente |
+| `/dashboard/prometheus` | Prometheus | Cards de las 3 alertas (FIRING/PENDING/INACTIVE) con tiempo en firing |
+| `/dashboard/wazuh` | Wazuh | Contador de alertas nativas + enlaces externos a Kibana/Wazuh |
+
+**Tiempo real = polling** (decisión de diseño, sin WebSockets ni SSE). Intervalos definidos en
+`src/constants/polling.ts` — configurables, nunca hardcodeados en componentes:
+
+| Constante | Valor | Uso |
+|---|---|---|
+| `ALERTAS_LOG` | 3 s | Visor de `alerts.log` |
+| `METRICAS_SISTEMA` | 10 s | Contenedores y métricas de sistema |
+| `FAIL2BAN` | 10 s | Estado de jail |
+| `HISTORIAL_WORKFLOWS` | 10 s | Historiales de n8n |
+| `WAZUH` | 10 s | Contador de alertas nativas |
+| `DASHBOARD` | 30 s | Alertas recientes, TPW, salud general |
+| `PROMETHEUS` | 30 s | Alertas de Prometheus |
+
+Las tablas operativas (IPs, patrones, tickets) usan botón manual "Actualizar", sin polling.
+
+**Autenticación frontend:** token en `localStorage` (`siem_token`), interceptor axios agrega
+`Authorization: Bearer`, ante 401 limpia sesión y redirige a `/login`. Rutas protegidas con
+`ProtectedRoute`; landing y login redirigen al panel si ya hay sesión.
+
+**Responsive:** breakpoint `lg` separa escritorio (sidebar fija) de móvil (barra superior sticky
+con scroll horizontal). Solo variantes `max-lg:`/`max-md:` — el diseño desktop no cambia.
+
+### 9.2 Backend — FastAPI
+
+| Ítem | Valor |
+|---|---|
+| Framework | FastAPI 0.115 + uvicorn 0.34, arranque con `python -m backend` (puerto 8000) |
+| BD | SQLAlchemy 2.0 async + psycopg3 (driver forzado en runtime por compatibilidad Windows) |
+| HTTP externo | httpx async (n8n, Prometheus, Wazuh Indexer) |
+| Docker | SDK oficial docker-py 7 (estado, recursos, exec de fail2ban/logger) |
+| Auth | python-jose (JWT HS256, expiración configurable, credenciales comparadas timing-safe) |
+
+**Servicios** (`backend/services/`): `docker_service` (contenedores/recursos, stats paralelos),
+`n8n_service` (disparo por webhook + historial REST con cliente compartido, cachés LRU y snapshot
+ante caídas de n8n, enriquecimiento paralelo), `prometheus_service` (reglas y queries),
+`fail2ban_service` (exec de `fail2ban-client` dentro del contenedor),
+`logs_injector_service` (inyección sintética RFC3164 con verificación de precondiciones),
+`wazuh_service` (conteo vía Indexer `_count`).
+
+Patrón de errores uniforme: excepciones de dominio mapeadas a HTTP semántico (400/404/500/502/503/
+504), mensajes en español, y **degradación elegante** donde corresponde (archivo de logs ausente →
+lista vacía; n8n caído → snapshot cacheado; índice Wazuh inexistente → total 0).
+
+### 9.3 Contrato de la API (verificado contra `backend/routers/`)
+
+Todas las rutas requieren `Authorization: Bearer <token>` salvo las marcadas 🌐.
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET 🌐 | `/api/health` | Health check |
+| POST 🌐 | `/api/auth/login` | Devuelve `{access_token, token_type}` |
+| GET | `/api/status/containers` | Estado up/down de los 14 contenedores (vía Docker Engine) |
+| GET | `/api/status/resources` | CPU/RAM por contenedor |
+| GET | `/api/metrics/tpw` | TPW actual, promedio e historial (calculado desde duraciones de ejecuciones n8n) |
+| GET | `/api/prometheus/alerts` | Las 3 alertas + métricas fail2ban (`banned_ips`, `up`) |
+| GET | `/api/alerts/recent` | Últimas alertas PG, paginado (`limit`≤50, `offset`) |
+| GET | `/api/alerts/log` | Últimas 50 líneas de `alerts.log` |
+| POST | `/api/logs/inject` | Inyecta logs sintéticos `{categoria}` |
+| GET | `/api/logs/inject/categorias` | Catálogo (9 categorías + paquete completo) con disponibilidad del emisor |
+| POST | `/api/workflows/main/run` | Dispara workflow principal |
+| POST | `/api/workflows/metrics/run` | Dispara workflow de métricas |
+| GET | `/api/workflows/runs` | Historial del principal (`limit`≤50) |
+| GET | `/api/workflows/metrics/runs` | Historial de métricas |
+| GET | `/api/workflows/tickets/runs` | Historial de tickets |
+| GET | `/api/workflows/bloqueo/runs` | Historial de auto-bloqueo |
+| GET | `/api/ips/blocked` | `blocked_ips` paginado, filtros `activo` y búsqueda por `motivo` |
+| POST | `/api/ips/{ip}/unblock` | Desbloquea vía `fail2ban-client` (la BD se actualiza por webhook n8n) |
+| POST | `/api/ips/{ip}/ban` | Baneo manual de prueba vía fail2ban |
+| GET | `/api/ips/attack-patterns` | Patrones paginados, filtros por `ip`/`categoria` |
+| GET | `/api/metrics/system` | Métricas de sistema paginadas, filtro por rango de fechas |
+| GET | `/api/tickets` | Tickets paginados (def. 15), filtros `estado`/`prioridad`, más recientes primero |
+| POST | `/api/tickets/{id}/resolve` | Cierra un ticket (`status=resolved`) |
+| GET | `/api/fail2ban/jail` | Estado de `n8n-soar-jail` e IPs baneadas |
+| GET | `/api/wazuh/alerts/count` | Total de alertas nativas Wazuh (vía Indexer OpenSearch) |
+
+Paginación uniforme offset/limit: respuesta `{items, total, limit, offset}`.
+
+---
+
+## 10. Variables de entorno
+
+### Backend (`backend/.env`) — leídas por `config.py`
+
+```
+DATABASE_URL=postgresql://db_user:db_pass@localhost:5432/security_monitoring
+N8N_URL=http://localhost:5678
+N8N_API_KEY=<token API REST de n8n>
+N8N_WORKFLOW_ID_PRINCIPAL=<id>          # obligatorio para historial/disparo
+N8N_WORKFLOW_ID_METRICAS=<id>
+N8N_WORKFLOW_ID_TICKETS=<id>            # opcional
+N8N_WORKFLOW_ID_BLOQUEO=<id>            # opcional
+PROMETHEUS_URL=http://localhost:9090
+DOCKER_HOST=npipe:////./pipe/dockerDesktopLinuxEngine    # unix:///var/run/docker.sock en Linux
+DASHBOARD_USER=admin
+DASHBOARD_PASSWORD=<completar>
+JWT_SECRET=<completar>
+FRONTEND_ORIGIN=http://localhost:5173   # único origen CORS permitido
+WAZUH_INDEXER_URL=https://localhost:9201
+WAZUH_INDEXER_USER=admin
+WAZUH_INDEXER_PASSWORD=<completar>
+WAZUH_ALERTS_INDEX=wazuh-alerts-*
+WAZUH_VERIFY_TLS=false                  # certificado autofirmado del indexer
+SYSLOG_HOST=syslog-ng                   # destino del logger del inyector
+SYSLOG_PORT=514
+FAIL2BAN_CONTAINER=fail2ban
+FAIL2BAN_JAIL=n8n-soar-jail
+ALERTS_LOG_PATH=logs/security/alerts.log
+```
+
+Notas: `.env` está en `.gitignore` — nunca versionar IPs ni credenciales. Los IDs de workflows van
+acá (no hardcodeados) porque n8n genera IDs nuevos al recrear workflows. `WAZUH_URL`/`WAZUH_USER`/
+`WAZUH_PASSWORD` existen en config pero **no se usan** (quedaron del diseño original vía manager).
+
+### Frontend (`frontend/.env`)
+
+```
+VITE_API_URL=http://localhost:8000      # obligatoria
+VITE_KIBANA_URL=http://localhost:5601   # opcional, enlaces de la página Wazuh
+VITE_WAZUH_URL=http://localhost:5602    # opcional
+```
+
+---
+
+## 11. Notas operativas
+
+### 11.1 Inyector de logs de prueba
+
+Expone `POST /api/logs/inject` con categorías: `root_login`, `ssh_failed` (×12, la que dispara el
+baneo demostrativo), `access_denied`, `port_scan`, `iptables_drop`, `sudo_usage`, `kernel_oops`,
+`service_restart`, `log_legitimo` y `paquete_completo`. Los logs atraviesan la cadena **real** de
+detección (syslog-ng → n8n → PG → Fail2ban → Prometheus). El backend nunca crea contenedores:
+solo verifica precondiciones (existencia, estado, red compartida con syslog-ng y `logger` de
+util-linux con soporte `--rfc3164`) y responde 503 con el comando exacto si algo falta.
+
+### 11.2 Preparar los emisores (antes de cada demo)
 
 ```bash
+# Paso 0 — nombre real de la red (compose materializa <proyecto>_security-network)
+docker network ls | grep security-network
+
+# Paso 1 — crear los tres emisores (<red> = nombre del paso 0)
 docker run -d --name web-server --hostname web-server --network <red> alpine sleep infinity
 docker run -d --name firewall   --hostname firewall   --network <red> alpine sleep infinity
-docker run -d --name db-server  --hostname db-server   --network <red> alpine sleep infinity
-```
+docker run -d --name db-server  --hostname db-server  --network <red> alpine sleep infinity
 
-## Paso 2 — instalar `logger` (util-linux) en cada uno
-
-La imagen `alpine` no trae `logger` de `util-linux` (el `logger` de BusyBox no soporta
-`--rfc3164`). Requiere salida a internet en el momento de instalarlo:
-
-```bash
+# Paso 2 — instalar logger (BusyBox trae un applet sin --rfc3164 que falla silencioso)
 docker exec web-server apk add --no-cache util-linux
 docker exec firewall   apk add --no-cache util-linux
 docker exec db-server  apk add --no-cache util-linux
 ```
 
-## Verificación rápida
-
-`command -v logger` no alcanza: la imagen `alpine` trae el applet `logger` de BusyBox
-preinstalado, que no soporta `--rfc3164` (falla silenciosamente en vez de emitir el log). Verificá
-soporte real de `--rfc3164`:
+Verificación rápida de que `logger` soporta `--rfc3164` (no alcanza con `command -v logger`, ya que
+BusyBox trae un applet con el mismo nombre que falla en silencio):
 
 ```bash
 docker exec web-server sh -c "logger --help 2>&1 | grep -q -- --rfc3164 && echo OK || echo FALTA util-linux"
 ```
 
-Con los tres emisores creados y con `logger` instalado, `POST /api/logs/inject` funciona para
-cualquier categoría del catálogo. `GET /api/logs/inject/categorias` informa por categoría si su
-emisor está disponible, para avisar antes de intentar inyectar.
+### 11.3 Problemas conocidos
+
+- **ELK con poco espacio/disco:** Elasticsearch bloquea ingesta con disco lleno. Soluciones
+  aplicadas: plantilla de índice con `number_of_replicas: 0` (single-node) y desactivar umbrales de
+  disco (`cluster.routing.allocation.disk.threshold_enabled: false`). Estado esperado: green.
+- **Logs manuales vs facility:** los comandos `logger` manuales con `<4>` pueden no matchear el
+  filtro `facility(auth, authpriv)` de syslog-ng — comportamiento esperado del pipeline.
+- **Driver BD en Windows:** asyncpg falla con WinError 64; `database.py` reescribe la URL a
+  psycopg3 en runtime. No quitar esa lógica.
+
+---
+
+## 12. Estado del desarrollo
+
+**Roadmap del panel web: COMPLETO.** Los 21 changes (CH00–CH20) fueron implementados y archivados
+entre el 17 y el 20/08/2026 mediante flujo OpenSpec (specs consolidados en `openspec/specs/`):
+
+- **Fase cimientos:** CH00 backend base · CH01 frontend base · CH02-03 autenticación
+- **Fase APIs:** CH04 contenedores · CH05 prometheus · CH06 alertas/logs · CH07 inyector ·
+  CH08 workflows n8n/TPW · CH09 gestión IPs · CH10 tickets · CH11 fail2ban · CH12 wazuh
+- **Fase UI:** CH13 inicio · CH14 dashboard · CH15 logs/detección · CH16 gestión IPs ·
+  CH17 tickets · CH18 fail2ban · CH19 prometheus · CH20 wazuh
+
+**Cobertura de los ejercicios del curso:**
+
+| Ejercicio | Consigna | Dónde está cubierto |
+|---|---|---|
+| 1 | Syslog-ng central + clientes enviando logs | `syslog-ng` colector central ([§4](#4-stack-de-contenedores-14-servicios)) + emisores de prueba ([§11.2](#112-preparar-los-emisores-antes-de-cada-demo)) |
+| 2 | Reglas de detección personalizadas + workflow n8n | Tabla `detection_rules` con 5 reglas seed ([§5](#5-base-de-datos-postgresql-security_monitoring)) + workflow principal ([§6](#6-workflows-de-n8n-versionados-en-datan8n)) |
+| 3 | Pipeline hacia ELK | n8n → Logstash → Elasticsearch → Kibana ([§4](#4-stack-de-contenedores-14-servicios)) |
+| 4 | Respuesta automática y notificaciones multi-canal | Auto-bloqueo vía Fail2ban, tickets automáticos vía Alertmanager→n8n, email/Slack ([§6](#6-workflows-de-n8n-versionados-en-datan8n), [§7](#7-monitoreo-prometheus--alertmanager--fail2ban-exporter)) |
+
+**Mejoras post-roadmap** (rama `correcciones-2`, fuera de openspec):
+
+1. Landing page comercial pública en `/`.
+2. Historiales de los 4 workflows n8n (principal, métricas, bloqueo, tickets).
+3. Optimización del historial n8n: fix de N+1 (~13 s → milisegundos) con cliente httpx compartido,
+   paralelización y caché con degradación elegante.
+4. Cierre manual de tickets (`POST /api/tickets/{id}/resolve`).
+5. Baneo manual (`POST /api/ips/{ip}/ban`).
+6. Responsive móvil completo (barra superior, sin tocar el diseño desktop).
+7. IDs de workflows movidos a variables de entorno.
+8. Filtros ampliados: búsqueda de IPs por motivo, tickets por prioridad, métricas por fecha.
+
+---
+
+## 13. Estructura del repositorio y convenciones
+
+```
+EquipoBotRojo-Proyecto-3/
+├── docker-compose.yml          # Stack de 14 contenedores (PROTEGIDO — no modificar)
+├── bd/                         # schema.sql + schema-extended.sql (referencia de modelos)
+├── data/
+│   ├── n8n/                    # Export JSON de los 6 workflows
+│   └── dashboards/             # Dashboards exportados (.ndjson)
+├── fail2ban_config/            # jail, filter, action unban, exporter.py
+├── prometheus/                 # prometheus.yml + reglas de las 3 alertas
+├── alertmanager/               # alertmanager.yml (receiver → webhook n8n)
+├── logstash/pipeline/          # Pipeline de ingesta
+├── wazuh/                      # manager/, indexer/, dashboard/ (config protegida)
+├── backend/                    # API FastAPI (routers/, services/, models/, schemas/)
+├── frontend/                   # Panel React+TS (pages/, components/, contexts/, services/)
+├── docs/                       # SDD.md (documento de diseño histórico)
+├── openspec/                   # Specs consolidados + archive de los 21 changes
+├── Dockerfile.exporter         # Build del fail2ban-exporter
+├── start-wazuh.ps1             # Arranque manual de daemons del wazuh-manager
+└── CHANGES.md                  # Roadmap histórico del panel web
+```
+
+> Nota: si en tu máquina local la carpeta raíz se llama `EquipoBotRojo.Proyecto3` (con puntos) en
+> lugar de `EquipoBotRojo-Proyecto-3` (con guiones, como el repositorio en GitHub), es solo el
+> nombre de carpeta local — no afecta nada del proyecto, pero conviene unificarlo para evitar
+> confusión al compartir rutas entre el equipo.
+
+**Convenciones de código:** todo en español; componentes PascalCase, hooks/servicios camelCase,
+carpetas kebab-case; TypeScript sin `any`; backend snake_case con try/except explícito en cada
+endpoint; sin IPs ni credenciales hardcodeadas. Detalle completo en `AGENTS.md` — es la referencia
+obligatoria antes de escribir código nuevo, manual o asistido por un agente.
+
+---
+
+## 14. Fuentes de información
+
+- Curso de Docker del profesor Ariel Enferrel.
+- GitHub provisto por los profesores (base de syslog-ng.conf, Logstash, BD PostgreSQL y nodos n8n).
+- Documentación oficial: [Wazuh 4.7](https://documentation.wazuh.com/4.7/) ·
+  [deployment Docker](https://documentation.wazuh.com/4.7/deployment-options/docker/docker-installation.html) ·
+  [API reference](https://documentation.wazuh.com/4.7/user-manual/api/reference.html)
+- Videos: [n8n intro](https://www.youtube.com/watch?v=3IvcIPDGB1k) ·
+  [playlist n8n](https://www.youtube.com/watch?v=llzEpKUxl9E&list=PLMd59HZRUmEjuFxu8hsAvErZkn0_W-A6b) ·
+  [Fail2ban](https://youtu.be/kgdoVeyoO2E) · [Prometheus/Alertmanager](https://www.youtube.com/watch?v=93aafqTJRwQ) ·
+  [Slack](https://www.youtube.com/watch?v=md6KZo_-bfw)
