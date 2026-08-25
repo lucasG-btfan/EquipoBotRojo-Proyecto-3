@@ -11,10 +11,16 @@ import { BarraNavegacion } from './BarraNavegacion'
  */
 export function Layout() {
   return (
-    <div className="flex min-h-screen bg-fondo max-lg:flex-col lg:h-screen lg:overflow-hidden">
+    <div className="relative flex min-h-screen bg-fondo max-lg:flex-col lg:h-screen lg:overflow-hidden">
+      {/* Mismo fondo del hero de LandingPage: glow radial + grilla sutil. */}
+      <div aria-hidden className="pointer-events-none fixed inset-0 z-0">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-10%,theme(colors.primario/25%),transparent_55%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(theme(colors.borde/50%)_1px,transparent_1px),linear-gradient(90deg,theme(colors.borde/50%)_1px,transparent_1px)] bg-[size:48px_48px] [mask-image:radial-gradient(ellipse_at_center,black,transparent_70%)]" />
+      </div>
+
       <BarraNavegacion />
       <Sidebar />
-      <main className="flex-1 overflow-y-auto p-6 max-lg:p-4">
+      <main className="relative z-10 flex-1 overflow-y-auto p-6 max-lg:p-4">
         <Outlet />
       </main>
     </div>
