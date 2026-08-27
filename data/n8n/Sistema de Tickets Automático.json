@@ -19,7 +19,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json.datos_originales || $input.first().json;\n\n// 1. Extraer la IP atacante\nconst sourceIp = input.source_ip || \"0.0.0.0\";\n\n// 2. Sincronizar Prioridad con el Score (70 = HIGH)\nconst score = input.risk_score || 0;\nconst finalPriority = score >= 80 ? 'critical' : score >= 60 ? 'high' : 'medium';\n\nreturn [{\n    json: {\n        ticket_number: 'TICKET-LOG-' + Math.random().toString(36).substr(2, 6).toUpperCase(),\n        title: `[DETECCIÓN] ${input.rule_name || \"Ataque SSH\"}`,\n        description: input.description,\n        status: 'open',\n        priority: $('Definir campo de origen').first().json.datos_originales.severity,\n        category: `HIDS/Logs-${input.rule_name}`,\n        source_ip: sourceIp,\n        threat_score: score,\n        assigned_to: 'rafa.legendsss@gmail.com',\n        created_at: new Date().toISOString(),\n        // 3. RELLENAR ALERT_REFERENCE (para que no salga null)\n        alert_reference: input.alert_reference\n    }\n}];"
+        "jsCode": "const input = $input.first().json.datos_originales || $input.first().json;\n\n// 1. Extraer la IP atacante\nconst sourceIp = input.source_ip || \"0.0.0.0\";\n\n// 2. Sincronizar Prioridad con el Score (70 = HIGH)\nconst score = input.risk_score || 0;\nconst finalPriority = score >= 80 ? 'critical' : score >= 60 ?\n'high' : 'medium';\nconst ruleName = input.rule_name || \"\";\nconst blockDecision = input.block_decision || \"\";\n\n// Eventos que generan bloqueo → resolved\n// Eventos de sistema sin bloqueo → open\nconst eventosConBloqueo = [\n  'Root Login Attempt',\n  'SSH Failed Password', \n  'Access Denied',\n  'Port Scan',\n  'Iptables Drop'\n];\n\nconst statusTicket = (eventosConBloqueo.includes(ruleName) || blockDecision === 'block') \n  ? 'resolved' \n  : 'open';\nreturn [{\n    json: {\n        ticket_number: 'TICKET-LOG-' + Math.random().toString(36).substr(2, 6).toUpperCase(),\n        title: `[DETECCIÓN] ${input.rule_name || \"Ataque SSH\"}`,\n        description: input.description,\n        status: statusTicket,\n        priority: $('Definir campo de origen').first().json.datos_originales.severity,\n        category: `HIDS/Logs-${input.rule_name}`,\n        source_ip: sourceIp,\n        threat_score: score,\n        assigned_to: 'rafa.legendsss@gmail.com',\n        created_at: new Date().toISOString(),\n        alert_reference: input.alert_reference\n    }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -249,7 +249,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.all();\nconst alert = input[0].json;\nconst alertname = alert.labels?.alertname || \n                  alert.commonLabels?.alertname || \n                  alert.groupLabels?.alertname || \n                  'Unknown';\nconst status = alert.status || 'firing';\nconst isResolved = status === 'resolved';\n\nconst mensajes = {\n  'IpBaneadaDetectada': {\n    firing: {\n      title: `[BANEO] IPs baneadas en Jail: ${alert.labels?.jail || 'n8n-soar-jail'}`,\n      description: `Prometheus detectó IPs baneadas activamente. Revisar tickets de logs para detalles.`,\n      priority: 'medium'\n    },\n    resolved: {\n      title: `[RESUELTO] Sin IPs baneadas en Jail: ${alert.labels?.jail || 'n8n-soar-jail'}`,\n      description: `Todas las IPs han sido desbaneadas. La jail está limpia.`,\n      priority: 'low'\n    }\n  },\n  'Fail2banCaido': {\n    firing: {\n      title: `[CRÍTICO] FAIL2BAN ESTÁ CAÍDO`,\n      description: `El servicio fail2ban no responde. El sistema de bloqueo automático está INACTIVO.`,\n      priority: 'critical'\n    },\n    resolved: {\n      title: `[RESUELTO] Fail2ban restaurado`,\n      description: `El servicio fail2ban volvió a estar operativo. El sistema de bloqueo está ACTIVO.`,\n      priority: 'low'\n    }\n  },\n  'AtaqueMasivo': {\n    firing: {\n      title: `[ATAQUE MASIVO] Más de 10 IPs baneadas simultáneamente`,\n      description: `Prometheus detectó un volumen anormal de baneos en ${alert.labels?.jail || 'n8n-soar-jail'}. Posible ataque coordinado.`,\n      priority: 'critical'\n    },\n    resolved: {\n      title: `[RESUELTO] Ataque masivo contenido`,\n      description: `El número de IPs baneadas bajó de 10. La situación está bajo control.`,\n      priority: 'low'\n    }\n  }\n};\n\nconst tipoAlerta = mensajes[alertname];\nconst info = tipoAlerta \n  ? (isResolved ? tipoAlerta.resolved : tipoAlerta.firing)\n  : {\n      title: `[${status.toUpperCase()}] ${alertname}`,\n      description: `Alerta de Prometheus: ${alertname}`,\n      priority: 'medium'\n    };\n\nreturn {\n  json: {\n    ticket_number: 'TICKET-METRICA-' + Math.random().toString(36).substr(2, 6).toUpperCase(),\n    title: info.title,\n    description: info.description,\n    status: isResolved ? 'resolved' : (info.priority === 'critical' ? 'urgent' : 'open'),\n    priority: info.priority,\n    category: 'IPS/Metrics',\n    source_ip: 'Prometheus',\n    threat_score: isResolved ? 0 : (info.priority === 'critical' ? 100 : 50),\n    assigned_to: 'security_team@example.com',\n    created_at: new Date().toISOString(),\n    alert_status: status\n  }\n};"
+        "jsCode": "const input = $input.all();\nconst alert = input[0].json;\nconst alertname = alert.labels?.alertname || \n                  alert.commonLabels?.alertname || \n                  alert.groupLabels?.alertname || \n                  'Unknown';\nconst status = alert.status || 'firing';\nconst isResolved = status === 'resolved';\n\nconst mensajes = {\n  'IpBaneadaDetectada': {\n    firing: {\n      title: `[BANEO] IPs baneadas en Jail: ${alert.labels?.jail || 'n8n-soar-jail'}`,\n      description: `Prometheus detectó IPs baneadas activamente. Revisar tickets de logs para detalles.`,\n      priority: 'medium'\n    },\n    resolved: {\n      title: `[RESUELTO] Sin IPs baneadas en Jail: ${alert.labels?.jail || 'n8n-soar-jail'}`,\n      description: `Todas las IPs han sido desbaneadas. La jail está limpia.`,\n      priority: 'low'\n    }\n  },\n  'Fail2banCaido': {\n    firing: {\n      title: `[CRÍTICO] FAIL2BAN ESTÁ CAÍDO`,\n      description: `El servicio fail2ban no responde. El sistema de bloqueo automático está INACTIVO.`,\n      priority: 'critical'\n    },\n    resolved: {\n      title: `[RESUELTO] Fail2ban restaurado`,\n      description: `El servicio fail2ban volvió a estar operativo. El sistema de bloqueo está ACTIVO.`,\n      priority: 'low'\n    }\n  },\n  'AtaqueMasivo': {\n    firing: {\n      title: `[ATAQUE MASIVO] Más de 10 IPs baneadas simultáneamente`,\n      description: `Prometheus detectó un volumen anormal de baneos en ${alert.labels?.jail || 'n8n-soar-jail'}. Posible ataque coordinado.`,\n      priority: 'critical'\n    },\n    resolved: {\n      title: `[RESUELTO] Ataque masivo contenido`,\n      description: `El número de IPs baneadas bajó de 10. La situación está bajo control.`,\n      priority: 'low'\n    }\n  }\n};\n\nconst tipoAlerta = mensajes[alertname];\nconst info = tipoAlerta \n  ? (isResolved ? tipoAlerta.resolved : tipoAlerta.firing)\n  : {\n      title: `[${status.toUpperCase()}] ${alertname}`,\n      description: `Alerta de Prometheus: ${alertname}`,\n      priority: 'medium'\n    };\n\nreturn {\n  json: {\n    ticket_number: 'TICKET-METRICA-' + Math.random().toString(36).substr(2, 6).toUpperCase(),\n    title: info.title,\n    description: info.description,\n    status: isResolved ? 'resolved' : (info.priority === 'critical' ? 'urgent' : 'open'),\n    priority: info.priority,\n    category: `IPS/Metrics/${alertname}`,\n    source_ip: 'Prometheus',\n    alertname: alertname,\n    threat_score: isResolved ? 0 : (info.priority === 'critical' ? 100 : 50),\n    assigned_to: 'security_team@example.com',\n    created_at: new Date().toISOString(),\n    alert_status: status\n  }\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -285,8 +285,8 @@
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [
-        -160,
-        288
+        -256,
+        432
       ],
       "id": "ef5e483c-7f23-459c-9630-9fd124acd7b2",
       "name": "Send email Alertmanager",
@@ -307,8 +307,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        -160,
-        448
+        -256,
+        576
       ],
       "id": "f57382ea-1f31-4116-8094-811994530251",
       "name": "Telegram Alertmanager",
@@ -599,11 +599,65 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        -144,
-        640
+        -256,
+        736
       ],
       "id": "2e48e2e3-65d1-4757-8db8-a898816023cd",
       "name": "Insertar Ticket en BD1",
+      "credentials": {
+        "postgres": {
+          "id": "fxbYllSjTFqyrT5U",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "61ce6f65-4d08-48dd-ad47-0c37448c59ac",
+              "leftValue": "={{ $json.alert_status }}",
+              "rightValue": "resolved",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -368,
+        224
+      ],
+      "id": "b70af4fc-a161-4a8c-8638-c9b11a3f7607",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE security_tickets\nSET status = 'resolved',\n    updated_at = NOW()\nWHERE id = (\n    SELECT id FROM security_tickets\n    WHERE category = '{{ $json.category }}'\n      AND status IN ('open', 'urgent')\n      AND title NOT LIKE '%RESUELTO%'\n    ORDER BY created_at DESC\n    LIMIT 1\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        32,
+        320
+      ],
+      "id": "30883c22-b4c4-4884-a048-3ea6e743d548",
+      "name": "Execute a SQL query",
       "credentials": {
         "postgres": {
           "id": "fxbYllSjTFqyrT5U",
@@ -680,6 +734,11 @@
             "node": "Insertar Ticket en BD1",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -744,13 +803,24 @@
           }
         ]
       ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "448cb9ef-e466-4c4a-841e-266c3f73ef38",
+  "versionId": "d725a373-118b-4419-90a8-e644d934e837",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "7478c350e39689cddadf155b6c5aead67e0635cfe1aa4e6d60c18ecb354db193"

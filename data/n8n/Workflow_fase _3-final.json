@@ -3,6 +3,22 @@
   "nodes": [
     {
       "parameters": {
+        "httpMethod": "POST",
+        "path": "ejecutar-analisis",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -2060,
+        144
+      ],
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Webhook Analisis",
+      "webhookId": "ejecutar-analisis"
+    },
+    {
+      "parameters": {
         "rule": {
           "interval": [
             {
@@ -726,6 +742,17 @@
   ],
   "pinData": {},
   "connections": {
+    "Webhook Analisis": {
+      "main": [
+        [
+          {
+            "node": "Leer archivo alerts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Schedule Trigger": {
       "main": [
         [

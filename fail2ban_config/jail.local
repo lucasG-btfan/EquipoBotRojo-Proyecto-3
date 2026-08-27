@@ -10,12 +10,10 @@ filter = n8n-soar-filter
 logpath = /var/log/security/fail2ban.log
 maxretry = 1
 # LUEGO DE PRUEBAS CAMBIAR DE 120 A MAS ALTO
-bantime = 120
-# Reincidentes
+bantime = 600
 bantime.increment = true
-bantime.factor = 2     
-# LUEGO DE PRUEBAS CAMBIAR DE 180 A MAS ALTO
-bantime.maxtime = 180 
+bantime.factor = 2
+bantime.maxtime = 86400 
 action = %(action_)s
          n8n-unban[name=soar]
 

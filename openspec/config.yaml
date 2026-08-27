@@ -1,0 +1,35 @@
+schema: spec-driven
+
+context: |
+  - Frontend: React + TypeScript + Tailwind CSS (en carpeta frontend/)
+  - Backend: FastAPI (Python, en backend/)
+  - Base de datos: PostgreSQL (ya en el stack Docker)
+  - El frontend solo consume el backend, nunca accede APIs externas directo
+  - APIs externas consumidas por backend: n8n, Prometheus (solo vía backend)
+  - Todo el código y mensajes en español
+  - Archivos y carpetas backend en snake_case
+  - Archivos/Componentes front en PascalCase; hooks/servicios en camelCase; carpetas en kebab-case
+  - Variables de entorno para cualquier credencial o endpoint
+  - Prohibido instalar dependencias sin consultar
+  - Paginación: offset/limit
+  - Prohibido hardcodear IPs/credenciales/logins
+  - El puerto backend es 8000, frontend 5173
+  - El archivo bd/schema.sql define obligatoriamente los modelos en Python
+  - CORS solo para frontend definido en FRONTEND_ORIGIN
+  - El dashboard requiere login simple (env DASHBOARD_USER, DASHBOARD_PASSWORD, JWT, en Backend)
+  - El polling de "tiempo real" se implementa con intervalos configurables en el front (no WS/SSE), y via constantes globales
+  - No modificar docker-compose, workflows n8n ni la config del stack
+
+rules:
+  proposal:
+    - Respetar lo explicitado en AGENTS.md y SDD.md como reglas duras
+    - Incluir sección "No-alcance" si aplica
+    - Usar descripción de propósito y alcance simple
+  tasks:
+    - Decomponer changes grandes en sub-tareas menores de 2 horas
+    - Aclarar dependencias con otros changes
+  apply:
+    - Nunca modificar archivos fuera de frontend/ y backend/
+    - Nunca agregar dependencias no mencionadas
+    - Usar manejo de errores explícito en endpoints Python
+    - Prohibido usar any en TypeScript
