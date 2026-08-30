@@ -10,10 +10,10 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        -2060,
-        144
+        -3408,
+        288
       ],
-      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "id": "8178f9f0-b7c6-4354-b8e6-a7d840eb438d",
       "name": "Webhook Analisis",
       "webhookId": "ejecutar-analisis"
     },
@@ -30,10 +30,10 @@
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
-        -1840,
-        144
+        -3184,
+        288
       ],
-      "id": "f81b3670-4098-4e4b-a550-3dd9ea8793b3",
+      "id": "100f15ba-8814-4b56-9c7b-9c21b173abbe",
       "name": "Schedule Trigger"
     },
     {
@@ -43,10 +43,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -176,
-        144
+        -1520,
+        288
       ],
-      "id": "0e7d3bf4-d641-4f64-a51c-92be91c20d4f",
+      "id": "fb369122-3ad3-40e1-91cf-a29670435b48",
       "name": "Detectar Amenazas"
     },
     {
@@ -56,10 +56,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        448,
-        144
+        -896,
+        288
       ],
-      "id": "6e28bd89-490e-4c30-8e92-e2163a79f059",
+      "id": "7157da63-e9e2-4dd0-91a6-4591ac9e18c7",
       "name": "Enriquecimiento Threat Intel"
     },
     {
@@ -69,10 +69,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        912,
-        864
+        -432,
+        1008
       ],
-      "id": "abd3e1ca-0d7b-47f5-a5ef-0a5c3057fad6",
+      "id": "11ea9962-114a-476e-bef2-db073c9a11fb",
       "name": "Nodo 8: Log Only"
     },
     {
@@ -82,10 +82,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1856,
-        16
+        512,
+        160
       ],
-      "id": "1548fad9-57f6-4918-acd6-d29bfa269c72",
+      "id": "2a31da5a-e09d-42b0-995b-c4b11c3025bf",
       "name": "Nodo 9: Resumen"
     },
     {
@@ -95,10 +95,10 @@
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        2528,
-        464
+        1184,
+        608
       ],
-      "id": "cd7ef903-0f64-4e08-9520-b732ea81deb4",
+      "id": "8bbe87c4-24fc-442a-b754-de6429a321dd",
       "name": "Limpiar archivo alerts"
     },
     {
@@ -109,10 +109,10 @@
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1,
       "position": [
-        -1328,
-        144
+        -2672,
+        288
       ],
-      "id": "7775ed8b-d7ac-45f4-b2ba-3c90dbb03063",
+      "id": "1e5353d3-12e5-4a6e-bdf1-774a0c5267fb",
       "name": "Extraer datos"
     },
     {
@@ -125,10 +125,10 @@
       "type": "n8n-nodes-base.readWriteFile",
       "typeVersion": 1,
       "position": [
-        -1584,
-        144
+        -2928,
+        288
       ],
-      "id": "851335df-60c8-47ba-958c-bd67c30ad008",
+      "id": "cad77412-ef97-4778-a677-3939ac10d433",
       "name": "Leer archivo alerts"
     },
     {
@@ -341,10 +341,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        1344,
-        16
+        0,
+        160
       ],
-      "id": "1bbb361c-cd5e-44b6-8e19-cf9e871033d6",
+      "id": "73d752cf-8f37-47b1-b6e0-efe445ac95ed",
       "name": "Registrar alerta",
       "retryOnFail": true,
       "credentials": {
@@ -366,10 +366,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        1760,
-        192
+        416,
+        336
       ],
-      "id": "38de0180-f7af-419c-b3f7-e6579a3b9f8e",
+      "id": "8fdb5de4-afe7-4c42-abe2-7b932dca91f4",
       "name": "Crear ticket"
     },
     {
@@ -410,10 +410,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        1376,
-        400
+        32,
+        544
       ],
-      "id": "940a26ec-8f2c-4c6c-afbc-3b8615da0186",
+      "id": "33b7453b-e925-4bb6-8701-f0fe2bd157e8",
       "name": "Bloquear IP maliciosa"
     },
     {
@@ -428,10 +428,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        1104,
-        592
+        -240,
+        736
       ],
-      "id": "60f33dfa-35a6-40d7-857e-d8a391a88c4a",
+      "id": "0f897402-fc46-4a6b-9dd7-fe216f3b8677",
       "name": "Enviar a Wazuh"
     },
     {
@@ -441,10 +441,10 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        2208,
-        256
+        864,
+        400
       ],
-      "id": "2bc5aba4-972a-4881-a39e-62ab8ef507e5",
+      "id": "2da9036f-7464-459f-a0a8-6e9d0d01a4c2",
       "name": "Merge"
     },
     {
@@ -454,10 +454,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -880,
-        16
+        -2224,
+        160
       ],
-      "id": "5651d2fb-1367-487e-81dc-fd701a2405b6",
+      "id": "c38eb7e7-8bd8-4ace-ab66-3159f7e0420f",
       "name": "Sin alertas"
     },
     {
@@ -467,10 +467,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -688,
-        144
+        -2032,
+        288
       ],
-      "id": "94c5749e-8f08-4d8f-9062-5216f2eda9af",
+      "id": "7eb79d3d-e11a-46ed-a2a2-a80fc2826a41",
       "name": "Estructurar Entradas de Log"
     },
     {
@@ -501,10 +501,10 @@
       "type": "n8n-nodes-base.filter",
       "typeVersion": 2.2,
       "position": [
-        912,
-        480
+        -432,
+        624
       ],
-      "id": "b9735f35-359d-4387-a177-5ad18ca57025",
+      "id": "4fcee96e-a7a5-4b3f-993d-6963b41498a0",
       "name": "Filtro de risk_level para Wazuh"
     },
     {
@@ -535,10 +535,10 @@
       "type": "n8n-nodes-base.filter",
       "typeVersion": 2.2,
       "position": [
-        784,
-        -32
+        -560,
+        112
       ],
-      "id": "b0128774-17f7-41c1-b5b2-f242a48fb7d7",
+      "id": "a8734a3f-11c5-45af-8faf-f5f919fbc3a6",
       "name": "Filtro risk level"
     },
     {
@@ -597,10 +597,10 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.3,
       "position": [
-        672,
-        144
+        -672,
+        288
       ],
-      "id": "f0605a7f-45e8-4aac-9e4a-1c631a0a25a8",
+      "id": "e9afff18-8a2b-4ba2-849c-390ac088239f",
       "name": "Switch por severidad"
     },
     {
@@ -612,10 +612,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        32,
-        144
+        -1312,
+        288
       ],
-      "id": "0e2dba52-a642-42f6-b235-06578bf1691a",
+      "id": "86809ab9-82be-43ed-8d45-d869445778cd",
       "name": "Obtener informacion de la reputacion de la IP",
       "credentials": {
         "postgres": {
@@ -652,10 +652,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        -1120,
-        144
+        -2464,
+        288
       ],
-      "id": "5babc901-a988-404c-af2b-e90e22016822",
+      "id": "f304a1a2-6801-48b8-9163-cc254396d532",
       "name": "Hay alertas?"
     },
     {
@@ -666,10 +666,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        240,
-        144
+        -1104,
+        288
       ],
-      "id": "c5a578d1-6e5c-47c3-9e43-3b4bb824dd5d",
+      "id": "2909baaa-86b6-4450-972c-c8197c626d4d",
       "name": "HTTP GeoIP"
     },
     {
@@ -699,10 +699,10 @@
       "type": "n8n-nodes-base.filter",
       "typeVersion": 2.2,
       "position": [
-        1552,
-        160
+        208,
+        304
       ],
-      "id": "80035ea6-081d-44d8-a6e0-313ef2e4d3eb",
+      "id": "1c025bf6-a12a-498b-8922-1bb2233ac7d4",
       "name": "Filtro de risk_score para tickets"
     },
     {
@@ -712,25 +712,25 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1040,
-        64
+        -304,
+        208
       ],
-      "id": "73f4d8a4-7c39-43fa-af90-911a037fb94a",
+      "id": "91c5372d-5a97-4d89-9067-a7b7b061cc25",
       "name": "Deduplicar por IP y rule_name"
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO attack_patterns (pattern_type, source_ip, target_host, first_seen, last_seen, occurrence_count, recent_count, window_start, is_blocked)\nVALUES (\n  '{{ $json.rule_name }}',\n  '{{ $json.source_ip }}',\n  '{{ $json.target_host }}',\n  NOW(), NOW(), 1, 1, NOW(),\n  {{ $json.risk_level === 'CRITICAL' || $json.risk_level === 'HIGH' }}\n)\nON CONFLICT (source_ip, pattern_type) DO UPDATE SET\n  last_seen = NOW(),\n  occurrence_count = attack_patterns.occurrence_count + 1,\n  recent_count = CASE \n    WHEN NOW() - attack_patterns.window_start > INTERVAL '1 hour' \n    THEN 1\n    ELSE attack_patterns.recent_count + 1\n  END,\n  window_start = CASE\n    WHEN NOW() - attack_patterns.window_start > INTERVAL '1 hour'\n    THEN NOW()\n    ELSE attack_patterns.window_start\n  END,\n  is_blocked = attack_patterns.is_blocked OR EXCLUDED.is_blocked;",
+        "query": "INSERT INTO attack_patterns (pattern_type, source_ip, target_host, first_seen, last_seen, occurrence_count, recent_count, window_start, is_blocked)\nVALUES (\n  '{{ $json.rule_name }}',\n  '{{ $json.source_ip }}',\n  '{{ $json.target_host }}',\n  NOW(), NOW(), 1, 1, NOW(),\n  {{ $json.risk_level === 'CRITICAL' || $json.risk_level === 'HIGH' }}\n)\nON CONFLICT (source_ip, pattern_type) DO UPDATE SET\n  last_seen = NOW(),\n  occurrence_count = attack_patterns.occurrence_count + 1,\n  recent_count = CASE \n    WHEN NOW() - attack_patterns.window_start > INTERVAL '1 hour' \n    THEN 1\n    ELSE attack_patterns.recent_count + 1\n  END,\n  window_start = CASE\n    WHEN NOW() - attack_patterns.window_start > INTERVAL '1 hour'\n    THEN NOW()\n    ELSE attack_patterns.window_start\n  END,\n  is_blocked = EXCLUDED.is_blocked;",
         "options": {}
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        1504,
-        -192
+        160,
+        -48
       ],
-      "id": "5df76772-ccc5-4c10-9957-d25c5bf3db67",
+      "id": "c05d018f-10bc-4b53-8ce7-6c5659d8782e",
       "name": "Actualizar attack_patterns",
       "credentials": {
         "postgres": {
@@ -784,11 +784,6 @@
             "index": 0
           }
         ]
-      ]
-    },
-    "Limpiar archivo alerts": {
-      "main": [
-        []
       ]
     },
     "Extraer datos": {
@@ -1035,11 +1030,11 @@
       ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "b9b68656-dd10-4a08-a0b4-c838945603a9",
+  "versionId": "929e2a95-dbd9-42a3-bd7e-37df4c4b2382",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "7478c350e39689cddadf155b6c5aead67e0635cfe1aa4e6d60c18ecb354db193"

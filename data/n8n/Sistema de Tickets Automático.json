@@ -223,7 +223,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const ticket = $('Construir mensaje Prometheus').first().json;\n\nif (ticket.category === 'IpBaneadaDetectada') {\n  return [{ \n    json: { \n      success: true, \n      message: \"Ticket omitido: IpBaneadaDetectada no se envía a Kibana para evitar ruido.\" \n    } \n  }];\n}\n\nlet originalRuleName = \"Alerta Métrica Prometheus\";\ntry {\n  const primerNodo = $('Definir campo de origen').first().json;\n  if (primerNodo.datos_originales?.alerts && primerNodo.datos_originales.alerts.length > 0) {\n    const primeraAlerta = primerNodo.datos_originales.alerts[0];\n    originalRuleName = primeraAlerta.labels?.alertname || primerNodo.datos_originales.commonLabels?.alertname || \"Prometheus Alert\";\n  }\n} catch (e) {\n  originalRuleName = ticket.title || \"Prometheus Alert\";\n}\n\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: 'http://logstash:8080',\n    body: {\n      ...ticket,\n      rule_name: originalRuleName, \n      type: 'ticket_created',\n      source: 'prometheus_alertmanager',\n      timestamp: new Date().toISOString()\n    },\n    json: true \n  });\n} catch (error) {\n  throw new Error('Error enviando ticket a Logstash: ' + error.message);\n}\n\n// 5. Respuesta de éxito con los datos reales\nreturn [{ \n  json: {\n    success: true,\n    ticket_number: ticket.ticket_number,\n    message: `Ticket de métricas ${ticket.ticket_number} enviado a Logstash exitosamente`,\n    details: {\n      priority: ticket.priority,\n      category: ticket.category,\n      rule_name: originalRuleName,\n      assigned_to: ticket.assigned_to,\n      timestamp: new Date().toISOString()\n    }\n  }\n}];"
+        "jsCode": "const ticket = $('Construir mensaje Prometheus').first().json;\n\nif (ticket.category?.includes('IpBaneadaDetectada')) {\n  return [{ \n    json: { \n      success: true, \n      message: \"Ticket omitido: IpBaneadaDetectada no se envía a Kibana para evitar ruido.\" \n    } \n  }];\n}\n\nlet originalRuleName = \"Alerta Métrica Prometheus\";\ntry {\n  const primerNodo = $('Definir campo de origen').first().json;\n  if (primerNodo.datos_originales?.alerts && primerNodo.datos_originales.alerts.length > 0) {\n    const primeraAlerta = primerNodo.datos_originales.alerts[0];\n    originalRuleName = primeraAlerta.labels?.alertname || primerNodo.datos_originales.commonLabels?.alertname || \"Prometheus Alert\";\n  }\n} catch (e) {\n  originalRuleName = ticket.title || \"Prometheus Alert\";\n}\n\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: 'http://logstash:8080',\n    body: {\n      ...ticket,\n      rule_name: originalRuleName, \n      type: 'ticket_created',\n      source: 'prometheus_alertmanager',\n      timestamp: new Date().toISOString()\n    },\n    json: true \n  });\n} catch (error) {\n  throw new Error('Error enviando ticket a Logstash: ' + error.message);\n}\n\n// 5. Respuesta de éxito con los datos reales\nreturn [{ \n  json: {\n    success: true,\n    ticket_number: ticket.ticket_number,\n    message: `Ticket de métricas ${ticket.ticket_number} enviado a Logstash exitosamente`,\n    details: {\n      priority: ticket.priority,\n      category: ticket.category,\n      rule_name: originalRuleName,\n      assigned_to: ticket.assigned_to,\n      timestamp: new Date().toISOString()\n    }\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -657,7 +657,7 @@
         320
       ],
       "id": "30883c22-b4c4-4884-a048-3ea6e743d548",
-      "name": "Execute a SQL query",
+      "name": "Cambiar ticket anterior a 'resolved'",
       "credentials": {
         "postgres": {
           "id": "fxbYllSjTFqyrT5U",
@@ -808,7 +808,7 @@
       "main": [
         [
           {
-            "node": "Execute a SQL query",
+            "node": "Cambiar ticket anterior a 'resolved'",
             "type": "main",
             "index": 0
           }
@@ -820,7 +820,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "d725a373-118b-4419-90a8-e644d934e837",
+  "versionId": "25e14828-f9c7-4ea5-8de7-cbc57e7543da",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "7478c350e39689cddadf155b6c5aead67e0635cfe1aa4e6d60c18ecb354db193"

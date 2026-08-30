@@ -20,7 +20,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO blocked_ips (ip_address, threat_score, reason, blocked_until, is_active) VALUES ($1, $2, $3, $4, true) ON CONFLICT (ip_address) DO UPDATE SET threat_score = EXCLUDED.threat_score, reason = EXCLUDED.reason, blocked_until = EXCLUDED.blocked_until, is_active = true RETURNING *",
+        "query": "INSERT INTO blocked_ips (ip_address, threat_score, reason, blocked_until, is_active) VALUES ($1, $2, $3, $4, true) ON CONFLICT (ip_address) DO UPDATE SET threat_score = EXCLUDED.threat_score, reason = EXCLUDED.reason, blocked_until = EXCLUDED.blocked_until, blocked_at = CURRENT_TIMESTAMP, is_active = true RETURNING *",
         "options": {
           "queryReplacement": "={{ $json.source_ip }}{{ $json.risk_score }}{{ $json.rule_name }}{{ $json.blocked_until }}"
         }
@@ -42,7 +42,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const inputItems = $input.all();\n\nreturn inputItems.map(item => {\n  const data = item.json;\n\n  // 1. Detectar si los datos vienen de un Webhook (dentro de \"body\") o directos\n  const payload = data.body ? data.body : data;\n\n  // 2. Extraer variables clave desde el payload correcto\n  const isPrivateIP = payload.threat_intel?.is_private_ip || false;\n  const category = payload.category || 'unknown';\n  const riskScore = Number(payload.risk_score) || 0;\n\n  // Valores por defecto\n  let blockDecision = 'ignore';\n  let reason = 'Score de riesgo insuficiente para tomar acción.';\n  let firewallAction = 'none';\n\n  // --- 3. REGLAS DE EXCLUSIÓN ESTRICTAS (WHITELIST) ---\n  if (isPrivateIP) {\n    reason = `IP Privada/Interna detectada (${payload.source_ip}). Las IPs de red local o contenedores no se bloquean.`;\n  } \n  else if (category === 'system' || category === 'maintenance') {\n    reason = `Evento de categoría '${category}'. Son errores del sistema, no ataques perimetrales.`;\n  }\n  \n  // --- 4. LÓGICA DE BLOQUEO ---\n  else if (riskScore >= 60) {\n    blockDecision = 'block';\n    reason = `Riesgo detectado (Score: ${riskScore}). Se requiere bloqueo en el firewall.`;\n    firewallAction = 'block';\n  }\n\n  // 5. Preparar el payload de salida aplanado (sin el \"body\" estorbando)\n  const result = {\n    ...payload, \n    block_decision: blockDecision,\n    reason: reason,\n    firewall_action: firewallAction\n  };\n\n  // 6. Configurar metadatos si la decisión es BLOQUEAR\n  if (blockDecision === 'block') {\n    result.jail_type = 'soar';\n    result.block_timestamp = new Date().toISOString();\n\n    const baseBanDurationMinutes = 1; \n    const blockedUntil = new Date();\n    blockedUntil.setMinutes(blockedUntil.getMinutes() + baseBanDurationMinutes);\n    \n    result.blocked_until = blockedUntil.toISOString();\n  }\n\n  return { json: result };\n});"
+        "jsCode": "const inputItems = $input.all();\n\nreturn inputItems.map(item => {\n  const data = item.json;\n\n  // 1. Detectar si los datos vienen de un Webhook (dentro de \"body\") o directos\n  const payload = data.body ? data.body : data;\n\n  // 2. Extraer variables clave desde el payload correcto\n  const isPrivateIP = payload.threat_intel?.is_private_ip || false;\n  const category = payload.category || 'unknown';\n  const riskScore = Number(payload.risk_score) || 0;\n\n  // Valores por defecto\n  let blockDecision = 'ignore';\n  let reason = 'Score de riesgo insuficiente para tomar acción.';\n  let firewallAction = 'none';\n\n  // --- 3. REGLAS DE EXCLUSIÓN ESTRICTAS (WHITELIST) ---\n  if (isPrivateIP) {\n    reason = `IP Privada/Interna detectada (${payload.source_ip}). Las IPs de red local o contenedores no se bloquean.`;\n  } \n  else if (category === 'system' || category === 'maintenance') {\n    reason = `Evento de categoría '${category}'. Son errores del sistema, no ataques perimetrales.`;\n  }\n  \n  // --- 4. LÓGICA DE BLOQUEO ---\n  else if (riskScore >= 60) {\n    blockDecision = 'block';\n    reason = `Riesgo detectado (Score: ${riskScore}). Se requiere bloqueo en el firewall.`;\n    firewallAction = 'block';\n  }\n\n  // 5. Preparar el payload de salida aplanado (sin el \"body\" estorbando)\n  const result = {\n    ...payload, \n    block_decision: blockDecision,\n    reason: reason,\n    firewall_action: firewallAction\n  };\n\n  // 6. Configurar metadatos si la decisión es BLOQUEAR\n  if (blockDecision === 'block') {\n    result.jail_type = 'soar';\n    result.block_timestamp = new Date().toISOString();\n\n    const baseBanDurationMinutes = 10; \n    const blockedUntil = new Date();\n    blockedUntil.setMinutes(blockedUntil.getMinutes() + baseBanDurationMinutes);\n    \n    result.blocked_until = blockedUntil.toISOString();\n  }\n\n  return { json: result };\n});"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -205,7 +205,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "5536c4e7-0bfb-4cef-bae5-fad03ab070fa",
+  "versionId": "eb361d40-60cf-46e4-84d7-7ff452f6d810",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "7478c350e39689cddadf155b6c5aead67e0635cfe1aa4e6d60c18ecb354db193"
