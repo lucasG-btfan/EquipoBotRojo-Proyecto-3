@@ -104,7 +104,7 @@ export function TablaPatronesAtaque() {
     { clave: 'occurrence_count', encabezado: 'Ocurrencias' },
     {
       clave: 'is_blocked',
-      encabezado: 'Bloqueada',
+      encabezado: 'Bloqueada la ultima vez?',
       render: (fila) =>
         fila.is_blocked ? (
           <Badge variante="peligro">Bloqueada</Badge>

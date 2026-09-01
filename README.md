@@ -5,10 +5,6 @@ open source: recolección centralizada de logs, detección de amenazas con workf
 respuesta automática (baneo de IPs, tickets), monitoreo de métricas con alertas, correlación SIEM
 con Wazuh — y un **panel de control web** propio que unifica la operación de todo el sistema.
 
-> 📄 Este documento reemplaza al README anterior y es la referencia única y actualizada del
-> proyecto. Describe el estado actual completo: arquitectura, componentes, cómo levantar cada
-> pieza, el contrato real de la API (verificado contra el código) y notas operativas.
-
 **Stack:** syslog-ng · n8n · PostgreSQL · Fail2ban · Prometheus + Alertmanager · ELK (Elasticsearch,
 Logstash, Kibana) · Wazuh · React + TypeScript · FastAPI · Docker
 
@@ -68,12 +64,12 @@ Si es la primera vez que tocás este repo, andá directo a [§3 — Inicio rápi
                                                 │ consulta/opera
      Emisores de logs                                          ▼
   (web-server, firewall,      syslog-ng ──▶ n8n (workflows SOAR) ──▶ PostgreSQL
-   db-server: efímeros)       (colector)         │                     │
-                                     │             ├──▶ Fail2ban ◀─── Prometheus ◀── fail2ban-exporter
-                                     │             ├──▶ Logstash ──▶ Elasticsearch ──▶ Kibana
-                                     │             └──▶ Wazuh Manager ◀── agentes Windows/Linux
-                                     ▼
-                          Alertmanager ──webhook──▶ n8n (creación de tickets)
+   db-server: efímeros)       (colector)         │                     
+                                                 ├──▶ Fail2ban ──▶  Prometheus ──▶   Alertmanager ──webhook──▶ n8n (creación de tickets)
+                                                  ├──▶ Logstash ──▶ Elasticsearch ──▶ Kibana
+                                                  └──▶ Wazuh Manager ◀── agentes Windows/Linux
+                                     
+                          
 ```
 
 **Flujo principal:** los logs llegan a syslog-ng → n8n los analiza contra reglas de detección →
@@ -532,7 +528,7 @@ obligatoria antes de escribir código nuevo, manual o asistido por un agente.
 ---
 
 ## 14. Fuentes de información
-
+Algunas de las fuentes de informacion usadas para el proyecto:
 - Curso de Docker del profesor Ariel Enferrel.
 - GitHub provisto por los profesores (base de syslog-ng.conf, Logstash, BD PostgreSQL y nodos n8n).
 - Documentación oficial: [Wazuh 4.7](https://documentation.wazuh.com/4.7/) ·
@@ -541,4 +537,4 @@ obligatoria antes de escribir código nuevo, manual o asistido por un agente.
 - Videos: [n8n intro](https://www.youtube.com/watch?v=3IvcIPDGB1k) ·
   [playlist n8n](https://www.youtube.com/watch?v=llzEpKUxl9E&list=PLMd59HZRUmEjuFxu8hsAvErZkn0_W-A6b) ·
   [Fail2ban](https://youtu.be/kgdoVeyoO2E) · [Prometheus/Alertmanager](https://www.youtube.com/watch?v=93aafqTJRwQ) ·
-  [Slack](https://www.youtube.com/watch?v=md6KZo_-bfw)
+  [Envio de tickets con N8N](https://www.youtube.com/watch?v=md6KZo_-bfw)
